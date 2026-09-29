@@ -29,15 +29,30 @@ one writer. They already work in Word with tracked changes.
 - Upload (choose file, see progress, download result and summary)
 
 # Data model
-User: id, email, createdAt
-RuleSet: id, userId, body, updatedAt
-Job: id, userId, ruleSetId, originalFilename, status, createdAt
-Edit: id, jobId, paragraphIndex, oldText, newText, risk, note, applied
+User: id, email, name (required by the auth library, left empty),
+  emailVerified, createdAt, updatedAt
+RuleSet: id, userId (one per user), body, updatedAt
+Job: id, userId, status (queued, processing, done, failed),
+  originalFilename (cleared when files are deleted), rulesSnapshot,
+  model, promptVersion, paragraphsTotal, paragraphsDone, editsTotal,
+  editsFlagged, editsSkipped, inputTokens, outputTokens, error,
+  createdAt, updatedAt, finishedAt, downloadedAt, filesDeletedAt
+Session, Verification, Account: sign-in tables required by the auth
+  library (email link sign-in).
+
+Deleting a user deletes their rule set, jobs and sessions.
+No text from a report is stored in the database.
 
 # Privacy
 Reports are confidential client documents. Uploaded and generated
 files are deleted from the server as soon as the result is
-downloaded, or after 24 hours at most. Only edit metadata is kept.
+downloaded, or after 24 hours at most, whether the job succeeded or
+failed. The original filename is cleared at the same time.
+
+To make the edits, the report's paragraphs are sent to the Claude API
+(Anthropic). No report text is stored in our database: only counts
+(paragraphs, edits, flagged, skipped), timestamps, token usage and
+the user's own rule set.
 
 # Not in v1
 - Google Docs, PDF or pasted text. Word files only.
