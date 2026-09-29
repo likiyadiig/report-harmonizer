@@ -30,7 +30,8 @@ one writer. They already work in Word with tracked changes.
 
 # Data model
 User: id, email, name (required by the auth library, left empty),
-  emailVerified, createdAt, updatedAt
+  emailVerified, image (optional, used by the auth library, left empty),
+  createdAt, updatedAt
 RuleSet: id, userId (one per user), body, updatedAt
 Job: id, userId, status (queued, processing, done, failed),
   originalFilename (cleared when files are deleted), rulesSnapshot,
