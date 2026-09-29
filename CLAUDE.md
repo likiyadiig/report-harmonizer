@@ -6,7 +6,10 @@ with comments on edits that might change the meaning.
 Stack: Next.js + TypeScript, Prisma + Postgres, Tailwind. Node 22.
 
 # Commands
-Filled in once the skeleton exists.
+npm run dev                           # dev server on http://localhost:3000
+npm run build                         # production build
+npm start                             # serve the production build
+npx prisma migrate dev --name <name>  # apply schema changes (ask first)
 
 # Rules
 SPEC.md is the contract. Anything in the "Not in v1" list does not
@@ -32,3 +35,13 @@ prototype/ is a working Python reference. Port its logic to
 TypeScript. Do not run or modify it.
 
 I'm learning. Explain what you're doing and why in plain language.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
