@@ -25,6 +25,9 @@ any tracked file. Secrets go in .env, which is gitignored.
 Never commit or copy .docx files into this repo. Client reports are
 confidential.
 
+Never disable validation, type checks or tests to make an error go
+away. Explain the error and ask me first.
+
 Only change files the task is about. Do not refactor, "improve" or
 fix unrelated code. Mention it instead.
 
