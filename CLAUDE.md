@@ -3,7 +3,7 @@ Report Harmonizer. Web app: a consultant uploads a multi-author Word
 report and gets it back harmonized into one voice, as tracked changes
 with comments on edits that might change the meaning.
 
-Stack: Next.js + TypeScript, Prisma + Postgres, Tailwind. Node 20.
+Stack: Next.js + TypeScript, Prisma + Postgres, Tailwind. Node 22.
 
 # Commands
 Filled in once the skeleton exists.

@@ -59,7 +59,7 @@ without me explaining anything. First my mom, then one consultant
 who isn't family.
 
 # Stack
-Next.js + TypeScript, Prisma + Postgres, Tailwind. Node 20.
+Next.js + TypeScript, Prisma + Postgres, Tailwind. Node 22.
 The Python scripts in prototype/ are a working reference for reading
 paragraphs, the Claude prompt and writing tracked changes. Port the
 logic, don't run them.
