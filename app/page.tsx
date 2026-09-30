@@ -19,6 +19,11 @@ export default async function Home() {
         <>
           <p className="mb-3">Signed in as {session.user.email}</p>
           <p className="mb-3">
+            <Link href="/upload" className="underline">
+              Upload a report
+            </Link>
+          </p>
+          <p className="mb-3">
             <Link href="/rules" className="underline">
               Your style rules
             </Link>
