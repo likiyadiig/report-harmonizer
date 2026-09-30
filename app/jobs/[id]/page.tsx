@@ -38,6 +38,9 @@ export default async function JobPage({
             timeStyle: "short",
           })}
         </dd>
+        <dt className="text-gray-600">Paragraphs to harmonize</dt>
+        {/* Jobs uploaded before paragraphs were counted have no count. */}
+        <dd>{job.paragraphsTotal ?? "Not counted"}</dd>
       </dl>
     </main>
   );
