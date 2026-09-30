@@ -18,6 +18,11 @@ export default async function Home() {
       {session ? (
         <>
           <p className="mb-3">Signed in as {session.user.email}</p>
+          <p className="mb-3">
+            <Link href="/rules" className="underline">
+              Your style rules
+            </Link>
+          </p>
           <form action={signOut}>
             <button type="submit" className="rounded border px-3 py-2">
               Sign out
