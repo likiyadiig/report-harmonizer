@@ -1,6 +1,6 @@
 "use server";
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { DEFAULT_RULES } from "@/lib/default-rules";
 import { isDocx } from "@/lib/docx";
+import { DocxReadError, MIN_WORDS, readParagraphs } from "@/lib/read-docx";
 import {
   MAX_UPLOAD_BYTES,
   MAX_UPLOAD_MB,
@@ -87,5 +88,49 @@ export async function uploadReport(
     return { message: "The file couldn't be saved. Please try again." };
   }
 
+  // Read the paragraphs now, so a file we can't work with is turned away
+  // at upload instead of failing later. Only the count is stored.
+  let paragraphsTotal: number;
+  try {
+    const { paragraphs } = await readParagraphs(job.id);
+    paragraphsTotal = paragraphs.filter((p) => p.eligible).length;
+  } catch (error) {
+    // Log a fixed message and codes only, never an error's message or
+    // stack: those could contain a file path or text from the report.
+    if (error instanceof DocxReadError) {
+      console.error(`Reading upload failed: ${error.code}`);
+    } else {
+      const name = error instanceof Error ? error.name : typeof error;
+      const code = (error as { code?: unknown } | null)?.code;
+      console.error(
+        `Reading upload failed: unexpected ${name}` +
+          (typeof code === "string" ? ` (${code})` : ""),
+      );
+    }
+    await discardUpload(uploadDir, job.id);
+    return {
+      message:
+        error instanceof DocxReadError && error.code === "too_large"
+          ? "This document is too large to process."
+          : "This file couldn't be read as a Word document.",
+    };
+  }
+
+  if (paragraphsTotal === 0) {
+    await discardUpload(uploadDir, job.id);
+    return {
+      message: `We didn't find any paragraphs to harmonize. Only paragraphs of ${MIN_WORDS} words or more are edited, so headings, short table entries and empty lines are left as they are.`,
+    };
+  }
+
+  await db.job.update({ where: { id: job.id }, data: { paragraphsTotal } });
+
   redirect(`/jobs/${job.id}`);
+}
+
+// Removes a rejected upload: the saved file and its job. A client report
+// must never stay on the server for a job that won't run.
+async function discardUpload(uploadDir: string, jobId: string) {
+  await rm(path.join(uploadDir, `${jobId}.docx`), { force: true });
+  await db.job.delete({ where: { id: jobId } });
 }

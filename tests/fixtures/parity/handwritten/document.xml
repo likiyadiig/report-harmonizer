@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Made-up text only. Normal content only: no tabs, no self-closing empty
+     paragraphs, no text boxes. Those are where the TypeScript reader
+     deliberately differs from prototype/read_report.py, and each has its
+     own test in tests/read-docx.test.ts. -->
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:body>
+<w:p w:rsidR="00A10001"><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:bookmarkStart w:id="0" w:name="summary"/><w:r><w:t>Executive summary</w:t></w:r><w:bookmarkEnd w:id="0"/></w:p>
+<w:p w:rsidR="00A10002"><w:r><w:t xml:space="preserve">The Riverbend Literacy Initiative ran for three years </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>across four districts</w:t></w:r><w:r><w:t xml:space="preserve"> &amp; reached families that the county&#8217;s earlier &quot;reading hour&quot; scheme never did.</w:t></w:r></w:p>
+<w:p w:rsidR="00A10003"><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>
+<w:p w:rsidR="00A10004"><w:r><w:t>Attendance was steady in every single term.</w:t></w:r></w:p>
+<w:p w:rsidR="00A10005"><w:r><w:t>Attendance was steady in almost every single term.</w:t></w:r></w:p>
+<w:p w:rsidR="00A10006"><w:r><w:t xml:space="preserve">The evaluation team visited </w:t></w:r><w:ins w:id="1" w:author="A. Reviewer" w:date="2026-01-05T10:00:00Z"><w:r><w:t xml:space="preserve">twelve </w:t></w:r></w:ins><w:del w:id="2" w:author="A. Reviewer" w:date="2026-01-05T10:00:00Z"><w:r><w:delText xml:space="preserve">ten </w:delText></w:r></w:del><w:r><w:t>partner schools during the spring of the final year.</w:t></w:r><w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteReference w:id="1"/></w:r></w:p>
+<w:p w:rsidR="00A10007"><w:r><w:t xml:space="preserve">Full attendance figures are listed in the </w:t></w:r><w:hyperlink w:anchor="summary" w:history="1"><w:r><w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr><w:t>summary table</w:t></w:r></w:hyperlink><w:proofErr w:type="spellStart"/><w:r><w:t xml:space="preserve"> below, grouped by district and by term.</w:t></w:r><w:proofErr w:type="spellEnd"/></w:p>
+<w:tbl>
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/></w:tblPr>
+<w:tblGrid><w:gridCol w:w="4675"/><w:gridCol w:w="4675"/></w:tblGrid>
+<w:tr><w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w:rsidR="00A10008"><w:r><w:t>Indicator</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w:rsidR="00A10009"><w:r><w:t>Result</w:t></w:r></w:p></w:tc></w:tr>
+<w:tr><w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w:rsidR="00A1000A"><w:r><w:t>Share of enrolled children who finished at least two reading levels</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w:rsidR="00A1000B"><w:r><w:t>74%</w:t></w:r></w:p></w:tc></w:tr>
+</w:tbl>
+<w:p w:rsidR="00A1000C"><w:r><w:t xml:space="preserve">As shown on page </w:t></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>3</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:t xml:space="preserve">, volunteers stayed longer than the programme had planned for.</w:t></w:r></w:p>
+<w:sdt><w:sdtPr><w:alias w:val="Recommendation"/><w:id w:val="101"/></w:sdtPr><w:sdtContent><w:p w:rsidR="00A1000D"><w:r><w:t>The district office should keep funding the weekend sessions next year.</w:t></w:r></w:p></w:sdtContent></w:sdt>
+<w:p w:rsidR="00A1000E"><w:r><w:t>Staff at the Café Lumière branch — and at the Škoda Street library — reported that parents who joined the weekend sessions were far more likely to borrow books for the whole family afterwards.</w:t></w:r></w:p>
+<w:p w:rsidR="00A1000F"><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Recommendations</w:t></w:r></w:p>
+<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>
+</w:body>
+</w:document>
