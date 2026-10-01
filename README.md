@@ -62,8 +62,14 @@ All of them go in `.env`. That file is gitignored. Never put real values in any 
 | `BETTER_AUTH_SECRET` | Signs sign-in sessions. Use a long random string. | `<random string, 32+ characters>` |
 | `BETTER_AUTH_URL` | The address the app runs at. Sign-in links point here. | `http://localhost:3000` |
 | `UPLOAD_DIR` | The folder where uploaded reports are stored. | `/var/tmp/report-harmonizer-uploads` |
+| `EMAIL_API_KEY` | The Resend API key that sends sign-in emails. | `re_<random characters>` |
+| `EMAIL_FROM` | Who sign-in emails come from. Use the name "Report Harmonizer" and an address on a domain verified in Resend. | `Report Harmonizer <signin@yourdomain.com>` |
 
 `UPLOAD_DIR` must be an absolute path outside the project folder. Uploads are confidential client reports, and they must never end up in the repo. The app refuses to start an upload if the path is relative or inside the project. It creates the folder on first upload.
+
+In development, use a separate Resend API key made for development. Never put the production key in your local `.env`. You can also leave `EMAIL_API_KEY` empty and get sign-in links in the terminal (see Signing in). If you set `EMAIL_API_KEY`, you must set `EMAIL_FROM` too.
+
+In production, both are required. The server refuses to start if either is missing.
 
 ## Data model
 
@@ -82,7 +88,13 @@ No report text is ever stored in the database. A job keeps only counts, timestam
 
 ## Signing in
 
-Sign in with an email link. Email sending is not set up yet. For now the link is printed to the terminal that runs `npm run dev`. Copy it into your browser.
+Sign in with an email link. The link expires after 15 minutes.
+
+With `EMAIL_API_KEY` and `EMAIL_FROM` set, the link is emailed through Resend. Until your domain is verified in Resend, it only delivers to the email address of your own Resend account.
+
+In development with `EMAIL_API_KEY` empty, the link is printed to the terminal that runs `npm run dev` instead. Copy it into your browser. Production never prints the link.
+
+If sending fails, the sign-in page asks the person to try again. The server log gets one line like `EMAIL_SEND_FAILED status=403 code=validation_error`, with no link and no email address.
 
 ## Tests
 
