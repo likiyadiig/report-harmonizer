@@ -52,6 +52,15 @@ npm run dev
 
 Open http://localhost:3000.
 
+In production, build the app and start it:
+
+```bash
+npm run build
+npm start
+```
+
+`npm start` listens on 127.0.0.1 port 3000 only, so it can't be reached from other machines. Put a reverse proxy (for example nginx or Caddy) on the same server to handle https and forward requests to it. The proxy must pass the original `Host` header through.
+
 ## Environment variables
 
 All of them go in `.env`. That file is gitignored. Never put real values in any tracked file.
@@ -60,13 +69,17 @@ All of them go in `.env`. That file is gitignored. Never put real values in any 
 | --- | --- | --- |
 | `DATABASE_URL` | The Postgres connection string. | `postgresql://USER:PASSWORD@localhost:5432/DATABASE` |
 | `BETTER_AUTH_SECRET` | Signs sign-in sessions. Use a long random string. | `<random string, 32+ characters>` |
-| `BETTER_AUTH_URL` | The address the app runs at. Sign-in links point here. | `http://localhost:3000` |
+| `BETTER_AUTH_URL` | The address the app runs at. Sign-in links point here. | `http://localhost:3000` in development, `https://harmonizer.example.com` in production |
 | `UPLOAD_DIR` | The folder where uploaded reports are stored. | `/var/tmp/report-harmonizer-uploads` |
 | `EMAIL_API_KEY` | The Resend API key that sends sign-in emails. | `re_<random characters>` |
 | `EMAIL_FROM` | Who sign-in emails come from. Use the name "Report Harmonizer" and an address on a domain verified in Resend. | `Report Harmonizer <signin@yourdomain.com>` |
 | `ALLOWED_EMAILS` | The email addresses allowed to sign in, separated by commas. Case and spaces are ignored. | `you@example.com, colleague@example.com` |
 
-`UPLOAD_DIR` must be an absolute path outside the project folder. Uploads are confidential client reports, and they must never end up in the repo. The app refuses to start an upload if the path is relative or inside the project. It creates the folder on first upload.
+`UPLOAD_DIR` must be an absolute path outside the project folder. Uploads are confidential client reports, and they must never end up in the repo. The server refuses to start if the path is relative or inside the project. It creates the folder on first upload.
+
+In development, you can leave `UPLOAD_DIR` empty. Uploads then go to `report-harmonizer-uploads` in your system temp folder (on Linux, `/tmp/report-harmonizer-uploads`), and the server prints that path when it starts. In production, `UPLOAD_DIR` is required. The server refuses to start if it is missing.
+
+`BETTER_AUTH_URL` is required in production and must start with `https://`. The server refuses to start otherwise. Sign-in links carry a sign-in token, so they must use https. Without this setting, the auth library would build the link from the address in the incoming request, which anyone can fake, so a sign-in email could point to someone else's site. In development, `http://localhost:3000` is fine.
 
 In development, use a separate Resend API key made for development. Never put the production key in your local `.env`. You can also leave `EMAIL_API_KEY` empty and get sign-in links in the terminal (see Signing in). If you set `EMAIL_API_KEY`, you must set `EMAIL_FROM` too.
 
