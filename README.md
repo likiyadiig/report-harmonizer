@@ -64,12 +64,15 @@ All of them go in `.env`. That file is gitignored. Never put real values in any 
 | `UPLOAD_DIR` | The folder where uploaded reports are stored. | `/var/tmp/report-harmonizer-uploads` |
 | `EMAIL_API_KEY` | The Resend API key that sends sign-in emails. | `re_<random characters>` |
 | `EMAIL_FROM` | Who sign-in emails come from. Use the name "Report Harmonizer" and an address on a domain verified in Resend. | `Report Harmonizer <signin@yourdomain.com>` |
+| `ALLOWED_EMAILS` | The email addresses allowed to sign in, separated by commas. Case and spaces are ignored. | `you@example.com, colleague@example.com` |
 
 `UPLOAD_DIR` must be an absolute path outside the project folder. Uploads are confidential client reports, and they must never end up in the repo. The app refuses to start an upload if the path is relative or inside the project. It creates the folder on first upload.
 
 In development, use a separate Resend API key made for development. Never put the production key in your local `.env`. You can also leave `EMAIL_API_KEY` empty and get sign-in links in the terminal (see Signing in). If you set `EMAIL_API_KEY`, you must set `EMAIL_FROM` too.
 
 In production, both are required. The server refuses to start if either is missing.
+
+`ALLOWED_EMAILS` is required in production too. The server refuses to start if it is missing or empty. In development, an empty `ALLOWED_EMAILS` lets any address sign in, and the server prints a warning when it starts. `npm run dev` listens on localhost only, so nobody else can reach that server. An entry that is not a single email address, for example addresses separated by semicolons, stops the server in every environment.
 
 ## Data model
 
@@ -95,6 +98,14 @@ With `EMAIL_API_KEY` and `EMAIL_FROM` set, the link is emailed through Resend. U
 In development with `EMAIL_API_KEY` empty, the link is printed to the terminal that runs `npm run dev` instead. Copy it into your browser. Production never prints the link.
 
 If sending fails, the sign-in page asks the person to try again. The server log gets one line like `EMAIL_SEND_FAILED status=403 code=validation_error`, with no link and no email address.
+
+Only addresses in `ALLOWED_EMAILS` can sign in. Anyone else sees the same "check your email" page but gets no email, so the page doesn't reveal who is on the list. The server log gets one line, `SIGN_IN_REFUSED code=not_allowed`, with no address.
+
+Restart the server after changing the list. Removing someone blocks new sign-ins, including a link they were sent before you removed them. It does not end a session they already have. Sessions last 7 days and renew while in use. For now, end them by hand in Postgres:
+
+```sql
+DELETE FROM "Session" WHERE "userId" = (SELECT id FROM "User" WHERE email = 'person@example.com');
+```
 
 ## Tests
 
@@ -128,6 +139,7 @@ The fixtures are made-up text, so their Python output is safe to commit. The .do
 Built:
 
 - Sign in with an email link.
+- Only addresses on an allowlist can sign in.
 - Edit and save a rule set, prefilled with the default rules.
 - Upload a .docx. This creates a queued job.
 - Read the report's paragraphs, count them, and reject reports that are unreadable or empty.
