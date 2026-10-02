@@ -40,7 +40,7 @@ export function getUploadDir(): string {
 // library falls back to the Host header of the request, which anyone can
 // fake, so a sign-in email could point to someone else's site. Outside
 // development it must be set and use https, because the link carries a
-// sign-in token. In development, http://localhost:3000 is fine.
+// sign-in token. In development, http://localhost:3001 is fine.
 export function checkAuthUrl(): void {
   if (process.env.NODE_ENV === "development") return;
   const value = process.env.BETTER_AUTH_URL;
