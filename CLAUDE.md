@@ -6,7 +6,7 @@ with comments on edits that might change the meaning.
 Stack: Next.js + TypeScript, Prisma + Postgres, Tailwind. Node 22.
 
 # Commands
-npm run dev                           # dev server on http://localhost:3000
+npm run dev                           # dev server on http://localhost:3001
 npm run build                         # production build
 npm start                             # serve the production build
 npx prisma migrate dev --name <name>  # apply schema changes (ask first)
