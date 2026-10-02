@@ -59,11 +59,13 @@ npm run build
 npm start
 ```
 
+`npm run build` first runs `prisma generate`, which creates the database client in `app/generated/prisma`, then builds the app. The server doesn't need a `.env` file. Without one, the variables are read from the environment, for example from your systemd unit or hosting panel. `DATABASE_URL` must be set when you build, not only when you start. Prisma checks for it while generating the client, even though it doesn't connect to the database.
+
 `npm start` listens on 127.0.0.1 port 3000 only, so it can't be reached from other machines. Put a reverse proxy (for example nginx or Caddy) on the same server to handle https and forward requests to it. The proxy must pass the original `Host` header through.
 
 ## Environment variables
 
-All of them go in `.env`. That file is gitignored. Never put real values in any tracked file.
+In development, all of them go in `.env`. That file is gitignored. In production, you can set them in the environment instead (see Setup). Never put real values in any tracked file.
 
 | Key | What it is for | Example format |
 | --- | --- | --- |
