@@ -4,10 +4,12 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { DEFAULT_RULES } from "@/lib/default-rules";
 import { isDocx } from "@/lib/docx";
+import { processJob } from "@/lib/process-job";
 import { DocxReadError, MIN_WORDS, readParagraphs } from "@/lib/read-docx";
 import {
   MAX_UPLOAD_BYTES,
@@ -124,6 +126,11 @@ export async function uploadReport(
   }
 
   await db.job.update({ where: { id: job.id }, data: { paragraphsTotal } });
+
+  // Harmonizing takes minutes, so it runs after the response is sent and
+  // the user lands on the job page right away. It must be scheduled
+  // before redirect(), which ends this function.
+  after(() => processJob(job.id));
 
   redirect(`/jobs/${job.id}`);
 }

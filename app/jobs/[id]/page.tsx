@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { AutoRefresh } from "./auto-refresh";
 
 export default async function JobPage({
   params,
@@ -22,6 +23,8 @@ export default async function JobPage({
 
   return (
     <main className="mx-auto max-w-2xl p-8">
+      {/* Keep the status current until the job is done or failed. */}
+      {(job.status === "queued" || job.status === "processing") && <AutoRefresh />}
       <Link href="/" className="text-sm underline">
         Home
       </Link>
@@ -31,6 +34,13 @@ export default async function JobPage({
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
         <dt className="text-gray-600">Status</dt>
         <dd>{job.status}</dd>
+        {/* job.error is always one of our own short, fixed messages. */}
+        {job.status === "failed" && job.error && (
+          <>
+            <dt className="text-gray-600">Reason</dt>
+            <dd>{job.error}</dd>
+          </>
+        )}
         <dt className="text-gray-600">Uploaded</dt>
         <dd>
           {job.createdAt.toLocaleString("en-GB", {

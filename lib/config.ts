@@ -2,8 +2,22 @@ import os from "node:os";
 import path from "node:path";
 
 // Recorded on each Job so we know which model and prompt produced it.
-export const MODEL = "claude-sonnet-5";
-export const PROMPT_VERSION = "v1";
+export const MODEL = "claude-opus-5-5";
+export const PROMPT_VERSION = "v4";
+
+// How hard Claude thinks before answering. Opus 5.5 always thinks a
+// little; "low" keeps the cost down for a careful but routine edit.
+export const EFFORT = "low";
+
+// Limits that stop a bug or an unusual report from running up costs. With
+// these, the most one job can cost on Opus 5.5 is about $8.60: 25 calls
+// that each use all their output tokens.
+export const MAX_JOB_CHARS = 300_000; // eligible text, about 150 pages
+export const BATCH_MAX_CHARS = 15_000; // text sent in one call
+export const MAX_CALLS_PER_JOB = 25; // retries included
+export const MAX_TOKENS_PER_CALL = 16_000;
+export const CALL_TIMEOUT_MS = 120_000;
+export const JOB_TIMEOUT_MS = 15 * 60_000;
 
 export const MAX_UPLOAD_MB = 25;
 export const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
@@ -34,6 +48,17 @@ export function getUploadDir(): string {
     throw new Error("UPLOAD_DIR must be outside the project folder.");
   }
   return resolved;
+}
+
+// The key for the Claude API. Required unless NODE_ENV is exactly
+// "development", so a server with NODE_ENV missing or misspelled fails at
+// startup. In development it may be empty: the app runs, and jobs fail
+// with "not set up" instead.
+export function getAnthropicKey(): string | undefined {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (key) return key;
+  if (process.env.NODE_ENV === "development") return undefined;
+  throw new Error("ANTHROPIC_API_KEY must be set to harmonize reports.");
 }
 
 // Sign-in links are built from BETTER_AUTH_URL. If it is empty, the auth
