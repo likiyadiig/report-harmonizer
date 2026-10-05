@@ -1,6 +1,6 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { checkAuthUrl, DEV_UPLOAD_DIR, getUploadDir } from "@/lib/config";
+import { checkAuthUrl, DEV_UPLOAD_DIR, getAnthropicKey, getUploadDir } from "@/lib/config";
 
 const OUTSIDE = path.resolve(process.cwd(), "..", "rh-uploads");
 
@@ -78,5 +78,31 @@ describe("checkAuthUrl", () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("BETTER_AUTH_URL", value);
     expect(() => checkAuthUrl()).not.toThrow();
+  });
+});
+
+describe("getAnthropicKey", () => {
+  it("returns the key when it is set", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    expect(getAnthropicKey()).toBe("sk-ant-test");
+  });
+
+  it.each([
+    ["production", undefined],
+    ["production", ""],
+    [undefined, ""],
+    ["test", ""],
+    ["Development", ""],
+  ])("fails when NODE_ENV is %s and ANTHROPIC_API_KEY is %j", (nodeEnv, key) => {
+    vi.stubEnv("NODE_ENV", nodeEnv);
+    vi.stubEnv("ANTHROPIC_API_KEY", key);
+    expect(() => getAnthropicKey()).toThrow("ANTHROPIC_API_KEY must be set");
+  });
+
+  it("may be empty in development", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    expect(getAnthropicKey()).toBeUndefined();
   });
 });

@@ -16,6 +16,7 @@ That is the goal. Only part of it is built so far (see Status).
 | Sign-in | better-auth | 1.7.6 |
 | Reading .docx files | jszip | 3.10.1 |
 | Parsing XML | saxes | 6.0.0 |
+| Claude API | @anthropic-ai/sdk | 0.131.0 |
 | Tests | vitest | 5.0.3 |
 
 The database is Postgres.
@@ -67,6 +68,7 @@ In development, all of them go in `.env`. That file is gitignored. In production
 | `EMAIL_API_KEY` | The Resend API key that sends sign-in emails. | `re_<random characters>` |
 | `EMAIL_FROM` | Who sign-in emails come from. Use the name "Report Harmonizer" and an address on a domain verified in Resend. | `Report Harmonizer <signin@yourdomain.com>` |
 | `ALLOWED_EMAILS` | The email addresses allowed to sign in, separated by commas. Case and spaces are ignored. | `you@example.com, colleague@example.com` |
+| `ANTHROPIC_API_KEY` | The Claude API key that harmonizes reports. Get it from the Anthropic Console. | `sk-ant-<random characters>` |
 
 `UPLOAD_DIR` must be an absolute path outside the project folder. Uploads are confidential client reports, and they must never end up in the repo. The server refuses to start if the path is relative or inside the project. It creates the folder on first upload.
 
@@ -79,6 +81,8 @@ In development, use a separate Resend API key made for development. Never put th
 In production, both are required. The server refuses to start if either is missing.
 
 `ALLOWED_EMAILS` is required in production too. The server refuses to start if it is missing or empty. In development, an empty `ALLOWED_EMAILS` lets any address sign in, and the server prints a warning when it starts. `npm run dev` listens on localhost only, so nobody else can reach that server. An entry that is not a single email address, for example addresses separated by semicolons, stops the server in every environment.
+
+`ANTHROPIC_API_KEY` is required in production. The server refuses to start if it is missing. In development, use a separate key made for development, never the production one. You can also leave it empty: the server prints a warning when it starts, and uploaded reports fail with "The server isn't set up to harmonize reports yet" instead of being sent to Claude.
 
 ## Deploying
 
@@ -118,6 +122,7 @@ In the commands below, replace:
    EMAIL_API_KEY="re_<random characters>"
    EMAIL_FROM="Report Harmonizer <signin@yourdomain.com>"
    ALLOWED_EMAILS="you@example.com, colleague@example.com"
+   ANTHROPIC_API_KEY="sk-ant-<random characters>"
    ```
 
    Put every value in double quotes. Two programs read this file: systemd, and your shell when you build (step 6). Without quotes, the shell would trip over the spaces and the `<` in `EMAIL_FROM`. Don't use `$`, `` ` ``, `"` or `\` inside a value, because the shell and systemd read those differently. Secrets made with `openssl rand -hex 32` only use 0-9 and a-f, so they're always safe.
@@ -247,13 +252,15 @@ sudo systemctl restart report-harmonizer
 
 The site may show errors from `npm ci` until the restart finishes, usually a minute or two. If the build fails, fix it and build again before you restart.
 
+A restart stops any report that is being harmonized or waiting to start. When the server starts again, it marks those jobs (status queued or processing) failed with "Interrupted, please upload again." The job page shows that reason. To avoid that, restart when nobody is uploading.
+
 ## Data model
 
 The tables are:
 
 - **User**: one row per person who signs in, keyed by email.
 - **RuleSet**: the user's style rules. One per user.
-- **Job**: one upload. It holds the status (queued, processing, done or failed), a copy of the rules used, the model and prompt version, counts of paragraphs and edits, token usage and timestamps. The edit counts, token usage and finish time are filled in once processing is built.
+- **Job**: one upload. It holds the status (queued, processing, done or failed), a copy of the rules used, the model and prompt version, counts of paragraphs and edits, token usage and timestamps. The edit counts, token usage and finish time are filled in while the report is harmonized.
 - **Session, Account, Verification**: sign-in tables the auth library needs.
 
 The database is set up so that deleting a user also deletes their rule set, jobs and sessions. The app has no way to delete a user yet.
@@ -278,6 +285,46 @@ Restart the server after changing the list. Removing someone blocks new sign-ins
 
 ```sql
 DELETE FROM "Session" WHERE "userId" = (SELECT id FROM "User" WHERE email = 'person@example.com');
+```
+
+## Harmonizing
+
+After an upload, the server sends the report's paragraphs to the Claude API (model `claude-opus-5-5`) while the user waits on the job page. The job moves from queued to processing, then to done or failed. While it is queued or processing, the job page refreshes its status every 3 seconds by itself.
+
+- Only paragraphs of 8 words or more are sent. Paragraphs that already have tracked changes are not sent, so the report's existing changes stay untouched. They are counted as skipped.
+- Paragraphs go in batches of up to 15,000 characters, so Claude sees neighbouring paragraphs and keeps one voice.
+- Claude gets fixed rules first: never change facts, numbers, names, quotes, hedges or the author's judgments, and never add colons or dashes. These are always sent, even if a user removes them from their own rules. The user's own rules follow.
+- Claude returns small edits ("old text" to "new text"). An edit is skipped, and counted, if its old text isn't found exactly once in the paragraph or if it overlaps another edit.
+- Claude is asked for small edits (a phrase or a sentence), each of which must read correctly with the words around it.
+- An edit is flagged if Claude marks it as a possible change of meaning, if it adds, removes or swaps a word that makes the text more or less certain (maybe, might, could, possibly, appears, and similar) or that carries the author's judgment (good, bad, serious, worrying, and similar), or if it adds a colon or dash the old text didn't have. The word and punctuation checks are done by the app itself (word lists in `lib/harmonize.ts`), so they're flagged even if Claude doesn't mark them. Flagged edits get a comment in the result.
+
+The result is saved next to the upload as `<job id>.edits.json`. For each paragraph, it holds the original text, the new text, a status (`unchanged`, `changed` or `skipped`) and the edits. This file holds report text, so it stays in `UPLOAD_DIR` and will be deleted with the upload. The database only gets counts and token usage.
+
+### Cost limits
+
+These limits are in `lib/config.ts`. They stop a bug or an unusual report from running up costs:
+
+| Limit | Value |
+| --- | --- |
+| Text per report | 300,000 characters, about 150 pages. Checked before any call. |
+| Claude calls per report | 25, retries included |
+| Output per call | 16,000 tokens |
+| Time per call | 2 minutes |
+| Time per report | 15 minutes |
+| Retries | At most one per batch, after a rate limit, server error, network error, timeout or unusable answer |
+
+A typical 40-page report costs about $0.60. The limits cap one report at about $8.60.
+
+### Logs
+
+The server logs one line per event, with the job id, counts, token usage and error codes. It never logs report text, rules, Claude's answers or the API key:
+
+```
+HARMONIZE_START job=<id> paragraphs=118 skipped=2 chars=91200 batches=7
+CLAUDE_CALL job=<id> call=3 paragraphs=24 in=4120 out=2890 stop=end_turn ms=18400
+CLAUDE_FAILED job=<id> call=4 status=429 kind=api retry=yes
+JOB_DONE job=<id> paragraphs=120 edits=74 flagged=9 skipped_edits=3 skipped_paragraphs=2 calls=8 in=28100 out=24300
+JOB_FAILED job=<id> code=api_error calls=2 in=0 out=0
 ```
 
 ## Tests
@@ -316,10 +363,10 @@ Built:
 - Edit and save a rule set, prefilled with the default rules.
 - Upload a .docx. This creates a queued job.
 - Read the report's paragraphs, count them, and reject reports that are unreadable or empty.
+- Send the paragraphs to the Claude API with the user's rules, and save the edits (see Harmonizing). For now a job is "done" once the edits are saved. Once the tracked changes writer is built, it will be done when the .docx is written.
 
 Next, from SPEC.md:
 
-- Send the paragraphs to the Claude API with the user's rules.
 - Write the edits back into the same .docx as tracked changes under the author "Report Harmonizer".
 - Add a comment on each edit flagged as a possible meaning change.
 - Show progress, then the result to download with a summary of edits, flagged and skipped.
