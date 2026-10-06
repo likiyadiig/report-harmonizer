@@ -1,6 +1,6 @@
 import "server-only";
 
-import { writeFile } from "node:fs/promises";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
@@ -12,12 +12,23 @@ import {
   getAnthropicKey,
   getUploadDir,
 } from "@/lib/config";
-import { HarmonizeError, harmonize, type Usage } from "@/lib/harmonize";
+import {
+  HarmonizeError,
+  harmonize,
+  type ParagraphResult,
+  type Usage,
+} from "@/lib/harmonize";
 import { DocxReadError, readParagraphs } from "@/lib/read-docx";
+import {
+  DocxWriteError,
+  type WriteCounts,
+  writeTrackedChanges,
+} from "@/lib/write-tracked-changes";
 
-// Runs one uploaded job: reads its paragraphs, gets Claude's edits and
-// saves them next to the upload as <jobId>.edits.json. The database only
-// gets the status, counts and token usage, never report text.
+// Runs one uploaded job: reads its paragraphs, gets Claude's edits, saves
+// them next to the upload as <jobId>.edits.json, then writes the report
+// with those edits as tracked changes to <jobId>.harmonized.docx. The
+// database only gets the status, counts and token usage, never report text.
 //
 // It never throws: every failure ends with the job marked failed and a
 // short, fixed reason on it.
@@ -29,10 +40,18 @@ export function resultPath(jobId: string): string {
   return path.join(getUploadDir(), `${jobId}.edits.json`);
 }
 
+// The report with Claude's edits as tracked changes. Like the results file,
+// it lives in the upload folder and is deleted with the upload.
+export function harmonizedPath(jobId: string): string {
+  if (!/^[a-z0-9]+$/.test(jobId)) throw new Error("Invalid job id.");
+  return path.join(getUploadDir(), `${jobId}.harmonized.docx`);
+}
+
 type FailureCode =
   | HarmonizeError["code"]
   | "not_configured"
   | "unreadable"
+  | "write_failed"
   | "unexpected";
 
 // What the user sees on a failed job.
@@ -45,6 +64,7 @@ const FAILURE_MESSAGES: Record<FailureCode, string> = {
   api_error: "Claude couldn't be reached. Please upload again later.",
   not_configured: "The server isn't set up to harmonize reports yet.",
   unreadable: "This file couldn't be read as a Word document.",
+  write_failed: "The edited report couldn't be saved. Please upload again.",
   unexpected: "Something went wrong. Please upload again.",
 };
 
@@ -106,24 +126,31 @@ export async function processJob(jobId: string): Promise<void> {
       { mode: 0o600 },
     );
 
+    // The job is only done once the harmonized file exists.
+    const written = await saveHarmonizedDocx(jobId, result.paragraphs);
+
     const { counts } = result;
+    const skippedEdits = counts.skippedEdits + written.skipped;
     await db.job.update({
       where: { id: jobId },
       data: {
         status: "done",
         paragraphsDone: input.length,
-        editsTotal: counts.edits,
-        editsFlagged: counts.flagged,
-        // The summary's "skipped" covers both edits that couldn't be placed
-        // and paragraphs left alone because of existing tracked changes.
-        editsSkipped: counts.skippedEdits + counts.skippedParagraphs,
+        // Only the edits that are in the file, so the summary matches what
+        // the user sees in Word.
+        editsTotal: written.written,
+        editsFlagged: written.flagged,
+        // The summary's "skipped" covers edits that couldn't be placed, by
+        // harmonize or by the writer, and paragraphs left alone because of
+        // existing tracked changes.
+        editsSkipped: skippedEdits + counts.skippedParagraphs,
         inputTokens: usage.inputTokens,
         outputTokens: usage.outputTokens,
         finishedAt: new Date(),
       },
     });
     console.log(
-      `JOB_DONE job=${jobId} paragraphs=${input.length} edits=${counts.edits} flagged=${counts.flagged} skipped_edits=${counts.skippedEdits} skipped_paragraphs=${counts.skippedParagraphs} calls=${usage.calls} in=${usage.inputTokens} out=${usage.outputTokens}`,
+      `JOB_DONE job=${jobId} paragraphs=${input.length} edits=${written.written} flagged=${written.flagged} skipped_edits=${skippedEdits} skipped_paragraphs=${counts.skippedParagraphs} calls=${usage.calls} in=${usage.inputTokens} out=${usage.outputTokens}`,
     );
   } catch (error) {
     if (error instanceof HarmonizeError) usage = error.usage;
@@ -149,11 +176,48 @@ export async function processJob(jobId: string): Promise<void> {
   }
 }
 
+// Writes the harmonized report. It goes to a temporary file first and is
+// renamed when complete, so a half-written file never has the final name.
+// Any failure here, whatever its cause, fails the job with "write_failed".
+async function saveHarmonizedDocx(
+  jobId: string,
+  paragraphs: ParagraphResult[],
+): Promise<WriteCounts> {
+  const target = harmonizedPath(jobId);
+  const temp = `${target}.tmp`;
+  const started = Date.now();
+  try {
+    const upload = await readFile(path.join(getUploadDir(), `${jobId}.docx`));
+    const { bytes, counts } = await writeTrackedChanges(upload, paragraphs, new Date());
+    await writeFile(temp, bytes, { mode: 0o600 });
+    await rename(temp, target);
+    const reasons = Object.entries(counts.skipReasons)
+      .map(([reason, n]) => `${reason}:${n}`)
+      .join(",");
+    console.log(
+      `TRACKED_CHANGES job=${jobId} written=${counts.written} flagged=${counts.flagged} skipped=${counts.skipped}${reasons ? ` reasons=${reasons}` : ""} ms=${Date.now() - started}`,
+    );
+    return counts;
+  } catch (error) {
+    await rm(temp, { force: true }).catch(() => {});
+    // The writer's own failures have a fixed reason. Anything else (the
+    // upload can't be read, the disk is full) is logged by class and code.
+    const reason =
+      error instanceof DocxWriteError
+        ? `reason=${error.reason}`
+        : `reason=unexpected ${describeUnexpected(error)}`;
+    console.error(`TRACKED_CHANGES_FAILED job=${jobId} ${reason}`);
+    throw new WriteFailedError();
+  }
+}
+
 class NotConfiguredError extends Error {}
+class WriteFailedError extends Error {}
 
 function failureCode(error: unknown): FailureCode {
   if (error instanceof HarmonizeError) return error.code;
   if (error instanceof NotConfiguredError) return "not_configured";
+  if (error instanceof WriteFailedError) return "write_failed";
   if (error instanceof DocxReadError) return "unreadable";
   return "unexpected";
 }

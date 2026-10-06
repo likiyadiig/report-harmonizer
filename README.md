@@ -300,6 +300,26 @@ After an upload, the server sends the report's paragraphs to the Claude API (mod
 
 The result is saved next to the upload as `<job id>.edits.json`. For each paragraph, it holds the original text, the new text, a status (`unchanged`, `changed` or `skipped`) and the edits. This file holds report text, so it stays in `UPLOAD_DIR` and will be deleted with the upload. The database only gets counts and token usage.
 
+### The harmonized report
+
+Then the app writes `<job id>.harmonized.docx` to `UPLOAD_DIR` (`lib/write-tracked-changes.ts`). Every edit is a Word tracked change by "Report Harmonizer", dated when the file was written. Only the words that changed are marked. Each flagged edit gets a Word comment with a fixed sentence and Claude's note:
+
+- possible change of meaning: "Please check whether this edit changes the meaning."
+- added colon or dash: "Please check this edit. It adds a colon or dash, which your rules avoid."
+- both: both sentences, then the note once.
+
+Only the edited text changes. Formatting, styles, footnotes, tables, existing comments and every other part of the file stay as they were. An edit is skipped, and counted, if it can't be written safely:
+
+- the paragraph already has tracked changes (including formatting changes), or its text isn't what Claude saw,
+- the old text crosses a change of formatting (a bold word, say), or something sits between its runs (a bookmark, a comment mark, a footnote reference, a link edge),
+- it touches a run that holds more than text (a tab, a break, a reference, a text box),
+- it's inside a field result (a cross-reference, the table of contents, a page number), which Word rewrites when fields update,
+- the new text has a line break, tab or invalid character.
+
+Word sometimes splits plain text into several runs with exactly the same formatting. An edit across those is written.
+
+The job is only marked done once the file is written. It is first written under a temporary name and renamed when complete. If writing fails, the job fails with "The edited report couldn't be saved. Please upload again." The server log line `TRACKED_CHANGES_FAILED` then gives a fixed reason code (the list is `DocxWriteReason` in `lib/write-tracked-changes.ts`), never text from the report. The summary's edit and flagged counts are the edits that are in the file. Edits the writer skipped are added to the skipped count.
+
 ### Cost limits
 
 These limits are in `lib/config.ts`. They stop a bug or an unusual report from running up costs:
@@ -323,6 +343,8 @@ The server logs one line per event, with the job id, counts, token usage and err
 HARMONIZE_START job=<id> paragraphs=118 skipped=2 chars=91200 batches=7
 CLAUDE_CALL job=<id> call=3 paragraphs=24 in=4120 out=2890 stop=end_turn ms=18400
 CLAUDE_FAILED job=<id> call=4 status=429 kind=api retry=yes
+TRACKED_CHANGES job=<id> written=74 flagged=9 skipped=3 reasons=crosses_formatting:2,in_field:1 ms=410
+TRACKED_CHANGES_FAILED job=<id> reason=content_types_missing
 JOB_DONE job=<id> paragraphs=120 edits=74 flagged=9 skipped_edits=3 skipped_paragraphs=2 calls=8 in=28100 out=24300
 JOB_FAILED job=<id> code=api_error calls=2 in=0 out=0
 ```
@@ -353,6 +375,8 @@ python3 prototype/read_report.py <printed path> > tests/fixtures/parity/<name>/p
 ```
 
 The fixtures are made-up text, so their Python output is safe to commit. The .docx files are not committed.
+
+The tracked changes tests (`tests/write-tracked-changes.test.ts`) build small made-up reports in memory. For each written file they check that it is a valid .docx, that "accept all changes" gives exactly the revised text and "reject all changes" exactly the original text, and that skipped edits leave the file unchanged.
 
 ## Status
 
