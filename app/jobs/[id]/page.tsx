@@ -3,7 +3,10 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { harmonizedFileExists } from "@/lib/download";
+import { summaryText } from "@/lib/job-summary";
 import { AutoRefresh } from "./auto-refresh";
+import { LocalTime } from "./local-time";
 
 export default async function JobPage({
   params,
@@ -20,6 +23,8 @@ export default async function JobPage({
     where: { id, userId: session.user.id },
   });
   if (!job) notFound();
+
+  const fileReady = job.status === "done" && (await harmonizedFileExists(job.id));
 
   return (
     <main className="mx-auto max-w-2xl p-8">
@@ -43,15 +48,44 @@ export default async function JobPage({
         )}
         <dt className="text-gray-600">Uploaded</dt>
         <dd>
-          {job.createdAt.toLocaleString("en-GB", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          })}
+          <LocalTime date={job.createdAt.toISOString()} />
         </dd>
+        {job.finishedAt && (
+          <>
+            <dt className="text-gray-600">Finished</dt>
+            <dd>
+              <LocalTime date={job.finishedAt.toISOString()} />
+            </dd>
+          </>
+        )}
         <dt className="text-gray-600">Paragraphs to harmonize</dt>
         {/* Jobs uploaded before paragraphs were counted have no count. */}
         <dd>{job.paragraphsTotal ?? "Not counted"}</dd>
       </dl>
+      {job.status === "done" && (
+        <section className="mt-6">
+          <p>{summaryText(job)}</p>
+          {fileReady ? (
+            <>
+              {/* A plain <a>, not <Link>: Link preloads its target, which
+                  would download the report in the background. */}
+              <a
+                href={`/jobs/${job.id}/download`}
+                className="mt-4 inline-block rounded bg-black px-3 py-2 text-white"
+              >
+                Download
+              </a>
+              <p className="mt-2 text-sm text-gray-600">
+                Open the file in Word and use Review to accept or reject each change.
+              </p>
+            </>
+          ) : (
+            <p className="mt-4">
+              This file is no longer available. Please upload the report again.
+            </p>
+          )}
+        </section>
+      )}
     </main>
   );
 }
