@@ -387,11 +387,11 @@ Built:
 - Edit and save a rule set, prefilled with the default rules.
 - Upload a .docx. This creates a queued job.
 - Read the report's paragraphs, count them, and reject reports that are unreadable or empty.
-- Send the paragraphs to the Claude API with the user's rules, and save the edits (see Harmonizing). For now a job is "done" once the edits are saved. Once the tracked changes writer is built, it will be done when the .docx is written.
+- Send the paragraphs to the Claude API with the user's rules, and save the edits (see Harmonizing).
+- Write the edits back into the same .docx as tracked changes under the author "Report Harmonizer", with a comment on each flagged edit (see The harmonized report). A job is done once this file is written.
+- Show progress, then the result to download with a summary of edits, flagged and skipped.
+- A public home page that explains the app, with a made-up sample report before and after (`public/samples/`) that anyone can download without signing in.
 
 Next, from SPEC.md:
 
-- Write the edits back into the same .docx as tracked changes under the author "Report Harmonizer".
-- Add a comment on each edit flagged as a possible meaning change.
-- Show progress, then the result to download with a summary of edits, flagged and skipped.
 - Delete the uploaded and generated files once the result is downloaded, or after 24 hours at most.

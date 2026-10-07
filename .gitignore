@@ -145,4 +145,6 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 *.docx
+# Made-up sample reports for the public home page. Never client files.
+!public/samples/*.docx
 venv/
