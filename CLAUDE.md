@@ -23,7 +23,8 @@ Never write a real credential (API keys, database passwords) into
 any tracked file. Secrets go in .env, which is gitignored.
 
 Never commit or copy .docx files into this repo. Client reports are
-confidential.
+confidential. The only exception is the made-up sample reports in
+public/samples/, which anyone can download from the home page.
 
 Never disable validation, type checks or tests to make an error go
 away. Explain the error and ask me first.
