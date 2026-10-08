@@ -40,6 +40,8 @@ TypeScript. Do not run or modify it.
 
 I'm learning. Explain what you're doing and why in plain language.
 
+Never edit a test to make it pass. If a test fails, report which one and why, then stop.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
