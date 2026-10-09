@@ -358,6 +358,15 @@ describe("comments on flagged edits", () => {
     ]);
   });
 
+  it("cuts Claude's note to at most 200 characters", async () => {
+    const out = await run(doc(p(r(SENTENCE))), [
+      { paragraph: 0, old: "was good", new: "was sound", risk: "possible", note: "a".repeat(500) },
+    ]);
+    const [comment] = await commentsOf(out);
+    expect(comment.startsWith(`${COMMENT_TEXT.meaning} `)).toBe(true);
+    expect(comment.slice(COMMENT_TEXT.meaning.length + 1).length).toBeLessThanOrEqual(200);
+  });
+
   it("has no colons or dashes in the fixed comment text", () => {
     for (const text of Object.values(COMMENT_TEXT)) expect(text).not.toMatch(/[:\-–—]/);
   });

@@ -148,6 +148,14 @@ outside the repo.
   the fixed sentences. Prompt injection cannot be fully prevented by
   prompt wording. The aim is to limit what a successful one can do
   without anyone noticing.
+- **Known limits after the fix (branch `safety-checks`):** These are not
+  caught.
+  - Text hidden through a Word style. Only `<w:vanish/>` set on the run
+    itself is seen, because `styles.xml` isn't read.
+  - White or tiny text. It is visible to Word, so it is sent to Claude
+    like any other text.
+  - Changed names. No check compares names or capitalised words between
+    the old and new text.
 
 ## 2. A tiny crafted .docx can freeze or crash the whole server while it is being read
 

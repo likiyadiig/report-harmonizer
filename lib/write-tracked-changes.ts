@@ -3,7 +3,7 @@ import "server-only";
 import path from "node:path";
 import { Readable } from "node:stream";
 import JSZip from "jszip";
-import type { Edit, EditFlag, ParagraphResult } from "@/lib/harmonize";
+import type { Edit, EditFlag, MeaningCheck, ParagraphResult } from "@/lib/harmonize";
 import {
   type DocxParagraph,
   type DocxRun,
@@ -38,6 +38,19 @@ export const COMMENT_TEXT: Record<EditFlag, string> = {
   meaning: "Please check whether this edit changes the meaning.",
   punctuation: "Please check this edit. It adds a colon or dash, which your rules avoid.",
 };
+
+// Said instead of the general meaning sentence when one of harmonize's own
+// meaning checks fired, so the comment says what to look at.
+export const CHECK_TEXT: Record<MeaningCheck, string> = {
+  numbers: "Please check the numbers. This edit adds, removes or changes a number.",
+  negation:
+    "Please check this edit. It adds or removes a word like not or never, which can turn the meaning around.",
+  cause: "Please check this edit. It now says one thing causes another, which the original may not say.",
+  quote: "Please check this edit. It changes a quote, which should stay word for word.",
+};
+
+// Claude's note goes into the comment, cut to at most this many characters.
+export const MAX_NOTE_CHARS = 200;
 
 export type SkipReason =
   | "paragraph_changed" // the paragraph's text isn't what Claude saw
@@ -343,14 +356,26 @@ function buildCluster(xml: string, cluster: Cluster, options: BuildOptions): str
 }
 
 function commentText(edit: Edit): string {
-  const sentences = (["meaning", "punctuation"] as const)
-    .filter((flag) => edit.flags.includes(flag))
-    .map((flag) => COMMENT_TEXT[flag]);
+  const sentences: string[] = [];
+  if (edit.flags.includes("meaning")) {
+    const checks = edit.checks ?? [];
+    if (checks.length > 0) sentences.push(...checks.map((check) => CHECK_TEXT[check]));
+    else sentences.push(COMMENT_TEXT.meaning);
+  }
+  if (edit.flags.includes("punctuation")) sentences.push(COMMENT_TEXT.punctuation);
   const note = edit.note
     .replace(/\s+/g, " ")
     .replace(new RegExp(UNSAFE_TEXT.source, "g"), "")
     .trim();
-  return [...sentences, note].filter(Boolean).join(" ");
+  return [...sentences, shorten(note, MAX_NOTE_CHARS)].filter(Boolean).join(" ");
+}
+
+// Cuts text to at most `max` characters, ending with "…" when it was cut.
+// Counted in whole characters, so an emoji is never split in half.
+function shorten(text: string, max: number): string {
+  const characters = [...text];
+  if (characters.length <= max) return text;
+  return characters.slice(0, max - 1).join("").trimEnd() + "…";
 }
 
 function commentXml(id: number, text: string, date: string): string {

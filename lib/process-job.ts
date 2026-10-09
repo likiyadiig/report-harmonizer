@@ -15,6 +15,7 @@ import {
 import {
   HarmonizeError,
   harmonize,
+  harmonizeInput,
   type ParagraphResult,
   type Usage,
 } from "@/lib/harmonize";
@@ -85,15 +86,7 @@ export async function processJob(jobId: string): Promise<void> {
 
     const job = await db.job.findUniqueOrThrow({ where: { id: jobId } });
     const { paragraphs } = await readParagraphs(jobId);
-    // Paragraphs that already have tracked changes are left alone, so the
-    // report's existing changes stay untouched.
-    const input = paragraphs
-      .filter((p) => p.eligible)
-      .map((p) => ({
-        index: p.index,
-        text: p.text,
-        skip: p.runs.some((r) => r.trackedChange !== null),
-      }));
+    const input = harmonizeInput(paragraphs);
 
     const client = new Anthropic({ apiKey, maxRetries: 0, timeout: CALL_TIMEOUT_MS });
     const result = await harmonize(client, input, {
