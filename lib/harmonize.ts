@@ -9,6 +9,7 @@ import {
   MAX_JOB_CHARS,
   MAX_TOKENS_PER_CALL,
 } from "@/lib/config";
+import type { DocxParagraph, DocxRun } from "@/lib/read-docx";
 
 // Sends a report's paragraphs to Claude with the user's rules, and turns
 // Claude's edits into one result per paragraph: its original text, its new
@@ -86,7 +87,7 @@ export type InputParagraph = {
 
 // "meaning": Claude marked the edit as a possible change of meaning, or it
 // adds, removes or swaps a word that makes the text more or less certain,
-// or one that carries the author's judgment.
+// or one that carries the author's judgment, or one of meaningChecks fires.
 // "punctuation": the new text adds a colon or dash the old text didn't have.
 export type EditFlag = "meaning" | "punctuation";
 
@@ -95,6 +96,10 @@ export type Edit = {
   old: string;
   new: string;
   flags: EditFlag[]; // empty unless the edit needs a comment
+  // Which of meaningChecks fired, for the comment's wording. Missing in
+  // edits saved before it existed: the comment then uses the general
+  // meaning sentence.
+  checks?: MeaningCheck[];
   note: string;
 };
 
@@ -213,6 +218,33 @@ export async function harmonize(
     },
     usage,
   };
+}
+
+// The reader's paragraphs, as harmonize takes them: only the eligible ones,
+// with skip set on those Claude must not see. Skipped paragraphs stay as
+// they are and are counted as skipped. They are:
+//   - paragraphs that already have tracked changes, so the report's
+//     existing changes stay untouched,
+//   - paragraphs with hidden text, in a text box or holding one. The
+//     consultant can't easily see that text in Word, so it could carry
+//     instructions to Claude that nobody notices.
+export function harmonizeInput(paragraphs: DocxParagraph[]): InputParagraph[] {
+  return paragraphs
+    .filter((p) => p.eligible)
+    .map((p) => ({
+      index: p.index,
+      text: p.text,
+      skip:
+        p.location === "textbox" ||
+        p.runs.some((r) => r.trackedChange !== null || r.containsTextBox || isHidden(r)),
+    }));
+}
+
+// Word's "Hidden" font option, <w:vanish/>, unless its w:val turns it off.
+// Text hidden through a style isn't seen here.
+function isHidden(run: DocxRun): boolean {
+  const vanish = run.propsXml.match(/<w:vanish\b([^>]*)>/);
+  return vanish !== null && !/w:val="(?:0|false|off)"/.test(vanish[1]);
 }
 
 // Groups paragraphs, in order, into batches of at most maxChars characters.
@@ -388,7 +420,7 @@ export function applyEdits(
   let skipped = rawEdits.filter((e) => !ids.has(e.paragraph)).length;
 
   const paragraphs = batch.map((p): ParagraphResult => {
-    const placed: Edit[] = [];
+    const placed: (RawEdit & { offset: number })[] = [];
     for (const e of rawEdits) {
       if (e.paragraph !== p.index) continue;
       const offset = p.text.indexOf(e.old);
@@ -401,39 +433,51 @@ export function applyEdits(
         skipped++;
         continue;
       }
-      const flags: EditFlag[] = [];
-      if (
-        e.risk === "possible" ||
-        changesHedging(e.old, e.new) ||
-        changesJudgment(e.old, e.new)
-      ) {
-        flags.push("meaning");
-      }
-      if (addsColonOrDash(e.old, e.new)) flags.push("punctuation");
-      placed.push({ offset, old: e.old, new: e.new, flags, note: e.note });
+      placed.push({ ...e, offset });
     }
 
     placed.sort((a, b) => a.offset - b.offset);
-    const edits: Edit[] = [];
+    const kept: typeof placed = [];
     for (const edit of placed) {
-      const previous = edits.at(-1);
+      const previous = kept.at(-1);
       if (previous && edit.offset < previous.offset + previous.old.length) {
         skipped++;
         continue;
       }
-      edits.push(edit);
+      kept.push(edit);
     }
 
-    if (edits.length === 0) {
-      return { index: p.index, original: p.text, revised: p.text, status: "unchanged", edits };
+    if (kept.length === 0) {
+      return { index: p.index, original: p.text, revised: p.text, status: "unchanged", edits: [] };
     }
     let revised = "";
     let position = 0;
-    for (const edit of edits) {
+    for (const edit of kept) {
       revised += p.text.slice(position, edit.offset) + edit.new;
       position = edit.offset + edit.old.length;
     }
     revised += p.text.slice(position);
+
+    // The number check looks at the whole paragraph. Moving a number as two
+    // edits (one removes it, one adds it elsewhere) changes no number, so
+    // neither edit is flagged for it. Every other check is per edit.
+    const numbersChanged = changesNumbers(p.text, revised);
+    const edits = kept.map((e): Edit => {
+      const checks = meaningChecks(e.old, e.new).filter(
+        (check) => check !== "numbers" || numbersChanged,
+      );
+      const flags: EditFlag[] = [];
+      if (
+        e.risk === "possible" ||
+        changesHedging(e.old, e.new) ||
+        changesJudgment(e.old, e.new) ||
+        checks.length > 0
+      ) {
+        flags.push("meaning");
+      }
+      if (addsColonOrDash(e.old, e.new)) flags.push("punctuation");
+      return { offset: e.offset, old: e.old, new: e.new, flags, checks, note: e.note };
+    });
     return { index: p.index, original: p.text, revised, status: "changed", edits };
   });
 
@@ -489,10 +533,15 @@ const HEDGE_PATTERN = wordPattern(HEDGE_WORDS);
 const JUDGMENT_PATTERN = wordPattern(JUDGMENT_WORDS);
 
 // True if `previous` and `next` don't have exactly the same words from the
-// list: one was added, removed or replaced by another.
-function changesWords(pattern: RegExp, previous: string, next: string): boolean {
-  const found = (text: string) =>
-    (text.match(pattern) ?? []).map((word) => word.toLowerCase()).sort().join(" ");
+// list: one was added, removed or replaced by another. `normalize` decides
+// which spellings count as the same word.
+function changesWords(
+  pattern: RegExp,
+  previous: string,
+  next: string,
+  normalize = (word: string) => word.toLowerCase(),
+): boolean {
+  const found = (text: string) => (text.match(pattern) ?? []).map(normalize).sort().join(" ");
   return found(previous) !== found(next);
 }
 
@@ -502,4 +551,68 @@ export function changesHedging(previous: string, next: string): boolean {
 
 export function changesJudgment(previous: string, next: string): boolean {
   return changesWords(JUDGMENT_PATTERN, previous, next);
+}
+
+// The checks below also don't rely on Claude: each one that fires gives the
+// edit the "meaning" flag, and its own sentence in the comment. applyEdits
+// only keeps "numbers" if the whole paragraph's numbers changed.
+export type MeaningCheck = "numbers" | "negation" | "cause" | "quote";
+
+export function meaningChecks(previous: string, next: string): MeaningCheck[] {
+  const checks: MeaningCheck[] = [];
+  if (changesNumbers(previous, next)) checks.push("numbers");
+  if (changesNegation(previous, next)) checks.push("negation");
+  if (addsCause(previous, next)) checks.push("cause");
+  if (changesQuote(previous, next)) checks.push("quote");
+  return checks;
+}
+
+// Numbers written in digits. A comma between digits is a thousands
+// separator, so "1,200" and "1200" are the same number. Units and words
+// around a number don't count: "58 percent" and "58%" are both 58. Number
+// words ("twelve") aren't checked.
+const NUMBER_PATTERN = /\d(?:[\d,.]*\d)?/g;
+
+export function changesNumbers(previous: string, next: string): boolean {
+  return changesWords(NUMBER_PATTERN, previous, next, (n) => n.replaceAll(",", ""));
+}
+
+// "cannot" and "n't" count as "not", so "isn't" and "is not" are the same.
+const NEGATION_PATTERN = /\b(?:not|no|never|none|nor|without|cannot)\b|n['’]t\b/gi;
+
+export function changesNegation(previous: string, next: string): boolean {
+  return changesWords(NEGATION_PATTERN, previous, next, (word) => {
+    const lower = word.toLowerCase();
+    return lower === "cannot" || lower.startsWith("n'") || lower.startsWith("n’") ? "not" : lower;
+  });
+}
+
+// Words that claim a cause. "such as" and "as well as" don't match.
+const CAUSE_PATTERNS = [
+  /\b(?:because|since|therefore|thus)\b/gi,
+  /\bso\s+that\b/gi,
+  /\bdue\s+to\b/gi,
+  /\bas\s+a\s+result\b/gi,
+  // ", as" joining two clauses, as in "needs fixing, as staff leave".
+  // Phrases where it doesn't claim a cause are left out.
+  /,\s*as\s+(?!(?:well|of|in|if|though|for|with|per|part|such)\b)\w/gi,
+];
+
+// True if `next` has more of any cause word than `previous`. Removing one
+// isn't flagged.
+export function addsCause(previous: string, next: string): boolean {
+  const count = (text: string, pattern: RegExp) => text.match(pattern)?.length ?? 0;
+  return CAUSE_PATTERNS.some((pattern) => count(next, pattern) > count(previous, pattern));
+}
+
+// Text inside double quotation marks, straight or curly. Single quotes
+// aren't checked, because the same character is also an apostrophe.
+const QUOTE_PATTERN = /"([^"]*)"|“([^”]*)”/g;
+
+// True if a quote that is whole in `previous` isn't word for word in `next`.
+// The quotation marks themselves may change.
+export function changesQuote(previous: string, next: string): boolean {
+  return [...previous.matchAll(QUOTE_PATTERN)].some(
+    (match) => !next.includes(match[1] ?? match[2]),
+  );
 }
