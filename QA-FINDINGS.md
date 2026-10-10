@@ -219,6 +219,11 @@ outside the repo.
   `/api/auth/sign-in/magic-link` endpoint with Better Auth's client, so
   its built-in limit applies. Either way, check how the client IP is
   read behind your hosting's proxy.
+- **Known limit (Low, not fixed):** a not allowed address gets its
+  answer slightly faster than an allowed one, because no email is
+  sent. Someone timing responses carefully could guess whether an
+  address is on the list. Low, because the list is very short, so this
+  reveals little.
 
 ## 4. The 26 MB request size applies to every Server Action, before anyone is signed in
 
