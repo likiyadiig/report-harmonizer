@@ -79,3 +79,33 @@ export function checkAuthUrl(): void {
     );
   }
 }
+
+export const MIN_AUTH_SECRET_LENGTH = 32;
+
+// BETTER_AUTH_SECRET signs session cookies. If it is missing, the auth
+// library only refuses when NODE_ENV is exactly "production"; otherwise it
+// quietly uses a default secret that is printed in its public source code.
+// Outside development it must be set and too long to guess. The message
+// names the setting, never its value.
+export function checkAuthSecret(): void {
+  if (process.env.NODE_ENV === "development") return;
+  const secret = process.env.BETTER_AUTH_SECRET ?? "";
+  if (secret.length < MIN_AUTH_SECRET_LENGTH) {
+    throw new Error(
+      `BETTER_AUTH_SECRET must be set to a random string of at least ${MIN_AUTH_SECRET_LENGTH} characters, for example the output of openssl rand -hex 32.`,
+    );
+  }
+}
+
+// Every page and every job needs the database. Without this check, a
+// missing DATABASE_URL only shows up as server errors on each request.
+// The message never includes the value: it holds the database password.
+export function checkDatabaseUrl(): void {
+  if (process.env.NODE_ENV === "development") return;
+  const url = process.env.DATABASE_URL ?? "";
+  if (!url.startsWith("postgresql://") && !url.startsWith("postgres://")) {
+    throw new Error(
+      "DATABASE_URL must be set to the Postgres connection string, starting with postgresql:// or postgres://.",
+    );
+  }
+}

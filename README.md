@@ -70,6 +70,8 @@ In development, all of them go in `.env`. That file is gitignored. In production
 | `ALLOWED_EMAILS` | The email addresses allowed to sign in, separated by commas. Case and spaces are ignored. | `you@example.com, colleague@example.com` |
 | `ANTHROPIC_API_KEY` | The Claude API key that harmonizes reports. Get it from the Anthropic Console. | `sk-ant-<random characters>` |
 
+`DATABASE_URL` and `BETTER_AUTH_SECRET` are required in production. The server refuses to start if `DATABASE_URL` doesn't start with `postgresql://` or `postgres://`, or if `BETTER_AUTH_SECRET` is shorter than 32 characters.
+
 `UPLOAD_DIR` must be an absolute path outside the project folder. Uploads are confidential client reports, and they must never end up in the repo. The server refuses to start if the path is relative or inside the project. It creates the folder on first upload.
 
 In development, you can leave `UPLOAD_DIR` empty. Uploads then go to `report-harmonizer-uploads` in your system temp folder (on Linux, `/tmp/report-harmonizer-uploads`), and the server prints that path when it starts. In production, `UPLOAD_DIR` is required. The server refuses to start if it is missing.
@@ -253,6 +255,8 @@ sudo systemctl restart report-harmonizer
 The site may show errors from `npm ci` until the restart finishes, usually a minute or two. If the build fails, fix it and build again before you restart.
 
 A restart stops any report that is being harmonized or waiting to start. When the server starts again, it marks those jobs (status queued or processing) failed with "Interrupted, please upload again." The job page shows that reason. To avoid that, restart when nobody is uploading.
+
+A job still queued or processing 20 minutes after upload (the 15 minute job limit plus 5 minutes) is marked failed with "This took too long. Please upload again." the next time its job page is opened. That catches jobs left unfinished by a brief database error while the server was running.
 
 ## Data model
 

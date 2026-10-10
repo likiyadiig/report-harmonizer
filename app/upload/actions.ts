@@ -84,9 +84,10 @@ export async function uploadReport(
       mode: 0o600,
     });
   } catch (error) {
-    // Don't leave a queued job behind that has no file.
+    // Don't leave a queued job behind, or the part of the file that was
+    // written before the save failed.
     console.error(error);
-    await db.job.delete({ where: { id: job.id } });
+    await discardUpload(uploadDir, job.id);
     return { message: "The file couldn't be saved. Please try again." };
   }
 

@@ -677,6 +677,12 @@ production systemd unit, the nginx site, and library behaviour in
 - **Suggested fix:** In `lib/process-job.ts:98`, pass `baseURL:
   "https://api.anthropic.com"` and `logLevel: "warn"` explicitly, so
   the environment can't change either.
+- **Known limit after the fix (branch `robustness`), Low:**
+  `ANTHROPIC_CUSTOM_HEADERS` is still read from the environment
+  (`node_modules/@anthropic-ai/sdk/client.js:117`) and has no
+  constructor option to turn it off. It can add headers to every
+  request, but can't change where the request goes, and it isn't set
+  in production.
 
 ## 5. The site doesn't send HSTS, so the first plain-http visit can be intercepted
 

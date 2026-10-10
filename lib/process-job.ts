@@ -48,6 +48,22 @@ export function harmonizedPath(jobId: string): string {
   return path.join(getUploadDir(), `${jobId}.harmonized.docx`);
 }
 
+// The library reads some settings from the environment when they aren't
+// passed: ANTHROPIC_BASE_URL would send report text and the key to another
+// address, ANTHROPIC_LOG=debug would write report text into the log, and
+// ANTHROPIC_AUTH_TOKEN would add a second credential. Setting each one here
+// means only this code decides them.
+export function createAnthropicClient(apiKey: string): Anthropic {
+  return new Anthropic({
+    apiKey,
+    authToken: null,
+    baseURL: "https://api.anthropic.com",
+    logLevel: "warn",
+    maxRetries: 0,
+    timeout: CALL_TIMEOUT_MS,
+  });
+}
+
 type FailureCode =
   | HarmonizeError["code"]
   | "not_configured"
@@ -88,7 +104,7 @@ export async function processJob(jobId: string): Promise<void> {
     const { paragraphs } = await readParagraphs(jobId);
     const input = harmonizeInput(paragraphs);
 
-    const client = new Anthropic({ apiKey, maxRetries: 0, timeout: CALL_TIMEOUT_MS });
+    const client = createAnthropicClient(apiKey);
     const result = await harmonize(client, input, {
       jobId,
       model: MODEL,
