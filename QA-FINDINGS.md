@@ -6,7 +6,7 @@ no change, for the reason given.
 
 | Finding | File and line | Severity | Reason | Disposition |
 |---|---|---|---|---|
-| Pass 2 #1: prompt injection; numbers and negations changed without a flag | `lib/harmonize.ts:266` | High | Breaks the core promise of never silently changing meaning, even without an attacker. | Fix now, branch 1: flag edits where numbers or negations change, skip or flag hidden text, add a cause-word flag |
+| Pass 2 #1: prompt injection; numbers and negations changed without a flag | `lib/harmonize.ts:266` | High | Breaks the core promise of never silently changing meaning, even without an attacker. | Fixed in #26. Numbers, negations, cause words, quotes and hidden text are now checked in code. |
 | Pass 2 #3: no rate limit on sign-in | `app/sign-in/actions.ts:21` | High | Anyone without an account can use up the email quota, so real users can't sign in. | Fix now, branch 2 |
 | Pass 4 #1: broken sign-in link shows no message | `app/sign-in/actions.ts:22` | High | Email scanners can use up links, leaving a real user stuck with no explanation. | Fix now, branch 2 |
 | Pass 2 #6: empty email gives a misleading message | `app/sign-in/actions.ts:25` | Low | Cosmetic, fixed because it's in the same code. | Fix now, branch 2 |
