@@ -7,21 +7,21 @@ no change, for the reason given.
 | Finding | File and line | Severity | Reason | Disposition |
 |---|---|---|---|---|
 | Pass 2 #1: prompt injection; numbers and negations changed without a flag | `lib/harmonize.ts:266` | High | Breaks the core promise of never silently changing meaning, even without an attacker. | Fixed in #26. Numbers, negations, cause words, quotes and hidden text are now checked in code. |
-| Pass 2 #3: no rate limit on sign-in | `app/sign-in/actions.ts:21` | High | Anyone without an account can use up the email quota, so real users can't sign in. | Fix now, branch 2 |
-| Pass 4 #1: broken sign-in link shows no message | `app/sign-in/actions.ts:22` | High | Email scanners can use up links, leaving a real user stuck with no explanation. | Fix now, branch 2 |
-| Pass 2 #6: empty email gives a misleading message | `app/sign-in/actions.ts:25` | Low | Cosmetic, fixed because it's in the same code. | Fix now, branch 2 |
-| Pass 3 #2: failed save leaves a half-written file | `app/upload/actions.ts:86` | Low | One-line fix with an existing helper. | Fix now, branch 3 |
-| Pass 3 #3: job stuck after a brief database error | `app/upload/actions.ts:128` | Medium | User watches the page refresh forever. | Fix now, branch 3 |
-| Pass 4 #3: no error page | `app/` (no `error.tsx`) | Medium | One error freezes the job page with a bare screen. | Fix now, branch 3 |
-| Pass 5 #2: auth secret and database URL not checked at startup | `instrumentation.ts:12` | Medium | A missing value would look healthy while sign-in fails. | Fix now, branch 3 |
-| Pass 5 #4: Anthropic base URL and log settings can be changed from outside | `lib/process-job.ts:98` | Low | Neither is set, but the fix is one line. | Fix now, branch 3 |
-| Pass 5 #5: no HSTS header | nginx site `app.malikstefan.com` (`README.md:207`) | Low | Session cookie is already https-only, the fix is one nginx line. | Fix now (nginx config) |
-| Pass 1 #1: removed users stay signed in | `lib/auth.ts:17` | Medium | They only reach their own data, and spending is capped by prepaid credits. Workaround: delete their sessions. | Issue |
-| Pass 2 #2: crafted .docx freezes the server | `lib/read-docx.ts:188` | Medium | Only allowlisted users can upload. Becomes High before opening sign-up. | Issue |
-| Pass 2 #4: 26 MB limit applies to all server actions | `next.config.ts:8` | Medium | Partly covered by the nginx 27 MB limit. | Issue |
-| Pass 3 #1: report files are never deleted | `app/jobs/[id]/download/route.ts:50` | Medium now, High before real reports | Must be done before real client reports. | Issue |
-| Pass 4 #2: long Claude answer times out and is paid twice | `lib/harmonize.ts:304` | Low to Medium | An estimate, not observed; test reports use far fewer tokens. | Issue |
-| Pass 5 #1: dev and production run as the same Linux user | `/etc/systemd/system/report-harmonizer.service` (`README.md:178`) | Medium now, High before real reports | Must be done before real client reports. | Issue |
+| Pass 2 #3: no rate limit on sign-in | `app/sign-in/actions.ts:21` | High | Anyone without an account can use up the email quota, so real users can't sign in. | Fixed in #27. Rate limit of 3 links per address and 10 per IP per 10 minutes. |
+| Pass 4 #1: broken sign-in link shows no message | `app/sign-in/actions.ts:22` | High | Email scanners can use up links, leaving a real user stuck with no explanation. | Fixed in #27. Expired or used links now show a clear message with a way to send a new one. |
+| Pass 2 #6: empty email gives a misleading message | `app/sign-in/actions.ts:25` | Low | Cosmetic, fixed because it's in the same code. | Fixed in #27. Empty and badly formed addresses get their own message. |
+| Pass 3 #2: failed save leaves a half-written file | `app/upload/actions.ts:86` | Low | One-line fix with an existing helper. | Fixed in #28. Failed uploads remove both the file and the job row. |
+| Pass 3 #3: job stuck after a brief database error | `app/upload/actions.ts:128` | Medium | User watches the page refresh forever. | Fixed in #28. Jobs stuck past 20 minutes are marked failed when the job page loads. |
+| Pass 4 #3: no error page | `app/` (no `error.tsx`) | Medium | One error freezes the job page with a bare screen. | Fixed in #28. Friendly error pages, and the job page keeps retrying after a temporary error. |
+| Pass 5 #2: auth secret and database URL not checked at startup | `instrumentation.ts:12` | Medium | A missing value would look healthy while sign-in fails. | Fixed in #28. Production refuses to start without a 32+ character secret and a postgres database address. |
+| Pass 5 #4: Anthropic base URL and log settings can be changed from outside | `lib/process-job.ts:98` | Low | Neither is set, but the fix is one line. | Fixed in #28. Anthropic address, log level and auth token are set in code. |
+| Pass 5 #5: no HSTS header | nginx site `app.malikstefan.com` (`README.md:210`) | Low | Session cookie is already https-only, the fix is one nginx line. | Fixed on the server on 10 October. nginx sends Strict-Transport-Security with max-age one year. |
+| Pass 1 #1: removed users stay signed in | `lib/auth.ts:17` | Medium | They only reach their own data, and spending is capped by prepaid credits. Workaround: delete their sessions. | Issue #20 |
+| Pass 2 #2: crafted .docx freezes the server | `lib/read-docx.ts:188` | Medium | Only allowlisted users can upload. Becomes High before opening sign-up. | Issue #21 |
+| Pass 2 #4: 26 MB limit applies to all server actions | `next.config.ts:8` | Medium | Partly covered by the nginx 27 MB limit. | Issue #22 |
+| Pass 3 #1: report files are never deleted | `app/jobs/[id]/download/route.ts:50` | Medium now, High before real reports | Must be done before real client reports. | Issue #23 |
+| Pass 4 #2: long Claude answer times out and is paid twice | `lib/harmonize.ts:304` | Low to Medium | An estimate, not observed; test reports use far fewer tokens. | Issue #24 |
+| Pass 5 #1: dev and production run as the same Linux user | `/etc/systemd/system/report-harmonizer.service` (`README.md:178`) | Medium now, High before real reports | Must be done before real client reports. | Issue #25 |
 | Pass 2 #5: null character in a file name or the rules | `app/upload/actions.ts:73` | Low | Only affects the person who sends it. | Accept |
 | Pass 4 #4: database calls without a time limit | `lib/db.ts:5` | Low | Postgres runs on the same machine. | Accept |
 | Pass 4 #5: silent download on unreadable file | `app/jobs/[id]/download/route.ts:37` | Low | The setup doesn't produce wrong permissions. | Accept |

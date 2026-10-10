@@ -207,6 +207,7 @@ In the commands below, replace:
        server_name harmonizer.example.com;
 
        client_max_body_size 27m;
+       add_header Strict-Transport-Security "max-age=31536000" always;
 
        location / {
            proxy_pass http://127.0.0.1:3000;
@@ -220,6 +221,7 @@ In the commands below, replace:
    ```
 
    - `client_max_body_size 27m`: nginx refuses uploads over 1 MB by default. Reports can be up to 25 MB, plus some room for the form around the file.
+   - `Strict-Transport-Security`: tells browsers to use only https for this site for the next year, even if someone types or clicks an http link. After certbot runs (step 9), this block becomes the https one. There's no `includeSubDomains`, because it would also force https on every other subdomain of your domain, and some of them may not have a certificate.
    - `Host`: passes on the domain the browser asked for. The app needs it. Forms check that the request came from the same site, and refuse it otherwise.
    - `X-Forwarded-Proto`: tells the app the visitor used https.
    - `X-Real-IP`, `X-Forwarded-For`: pass on the visitor's real IP address instead of 127.0.0.1.
