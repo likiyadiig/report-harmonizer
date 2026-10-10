@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { harmonizedFileExists } from "@/lib/download";
+import { failStuckJob, isStuck } from "@/lib/interrupted-jobs";
 import { summaryText } from "@/lib/job-summary";
 import { AutoRefresh } from "./auto-refresh";
 import { LocalTime } from "./local-time";
@@ -19,10 +20,16 @@ export default async function JobPage({
   const { id } = await params;
   // Filtering by user too means someone else's job looks exactly like a
   // job that doesn't exist.
-  const job = await db.job.findFirst({
-    where: { id, userId: session.user.id },
-  });
+  const where = { id, userId: session.user.id };
+  let job = await db.job.findFirst({ where });
   if (!job) notFound();
+
+  // Unfinished jobs are otherwise only cleaned up when the server starts.
+  if (isStuck(job)) {
+    await failStuckJob(job.id);
+    job = await db.job.findFirst({ where });
+    if (!job) notFound();
+  }
 
   const fileReady = job.status === "done" && (await harmonizedFileExists(job.id));
 

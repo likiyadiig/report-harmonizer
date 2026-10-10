@@ -4,12 +4,15 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { getEmailConfig } = await import("./lib/email");
     const { getAllowlist } = await import("./lib/allowlist");
-    const { checkAuthUrl, getAnthropicKey, getUploadDir } = await import("./lib/config");
-    // If the email settings, ALLOWED_EMAILS, UPLOAD_DIR, BETTER_AUTH_URL or
-    // ANTHROPIC_API_KEY are incomplete, stop the server so a bad setup
-    // fails at startup and not on someone's first sign-in or upload.
+    const { checkAuthSecret, checkAuthUrl, checkDatabaseUrl, getAnthropicKey, getUploadDir } =
+      await import("./lib/config");
+    // If DATABASE_URL, the email settings, ALLOWED_EMAILS, UPLOAD_DIR,
+    // BETTER_AUTH_URL, BETTER_AUTH_SECRET or ANTHROPIC_API_KEY are
+    // incomplete, stop the server so a bad setup fails at startup and not
+    // on someone's first sign-in or upload.
     // Throwing is not enough: Next.js logs the error and keeps serving.
     try {
+      checkDatabaseUrl();
       getEmailConfig();
       if (getAllowlist().mode === "anyone") {
         console.warn("ALLOWED_EMAILS is empty: any address can sign in (development only).");
@@ -19,6 +22,7 @@ export async function register() {
         console.warn(`UPLOAD_DIR is empty: uploads go to ${uploadDir} (development only).`);
       }
       checkAuthUrl();
+      checkAuthSecret();
       if (!getAnthropicKey()) {
         console.warn("ANTHROPIC_API_KEY is empty: uploaded reports will fail instead of being harmonized (development only).");
       }
