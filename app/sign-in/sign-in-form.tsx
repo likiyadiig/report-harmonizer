@@ -7,7 +7,12 @@ const initialState: SignInState = { status: "idle" };
 
 type Props = { expiresMinutes: number; linkInTerminal: boolean };
 
-export function SignInForm({ expiresMinutes, linkInTerminal }: Props) {
+// linkFailed: the page was opened from a sign-in link that didn't work.
+export function SignInForm({
+  expiresMinutes,
+  linkInTerminal,
+  linkFailed,
+}: Props & { linkFailed: boolean }) {
   const [state, formAction, pending] = useActionState(sendLink, initialState);
   // Controlled, so the typed address survives React resetting the form
   // after it is sent, and is still there after "Use a different email address".
@@ -34,12 +39,12 @@ export function SignInForm({ expiresMinutes, linkInTerminal }: Props) {
       }}
       className="flex flex-col gap-3"
     >
-      {state.status === "error" && !editing && (
+      {linkFailed && state.status === "idle" && (
         <p role="alert" className="text-red-700">
-          We couldn&apos;t send your sign-in link. Please try again in a few
-          minutes.
+          This link has expired or was already used. Send yourself a new one.
         </p>
       )}
+      {!editing && <StatusMessage status={state.status} />}
       <label htmlFor="email">Email</label>
       <input
         id="email"
@@ -58,6 +63,23 @@ export function SignInForm({ expiresMinutes, linkInTerminal }: Props) {
         {pending ? "Sending…" : "Send sign-in link"}
       </button>
     </form>
+  );
+}
+
+// What went wrong with the last request, if anything.
+export function StatusMessage({ status }: { status: SignInState["status"] }) {
+  const messages: Partial<Record<SignInState["status"], string>> = {
+    error: "We couldn't send your sign-in link. Please try again in a few minutes.",
+    limited: "Too many attempts. Please try again in a few minutes.",
+    empty: "Please type your email address.",
+    invalid: "Please type a valid email address.",
+  };
+  const message = messages[status];
+  if (!message) return null;
+  return (
+    <p role="alert" className="text-red-700">
+      {message}
+    </p>
   );
 }
 

@@ -281,6 +281,10 @@ If sending fails, the sign-in page asks the person to try again. The server log 
 
 Only addresses in `ALLOWED_EMAILS` can sign in. Anyone else sees the same "check your email" page but gets no email, so the page doesn't reveal who is on the list. The server log gets one line, `SIGN_IN_REFUSED code=not_allowed`, with no address.
 
+Sign-in links are limited to 3 per email address and 10 per IP address in any 10 minutes. After that, the page says "Too many attempts" and sends nothing. Allowed and not allowed addresses are counted the same way, so the limit doesn't reveal who is on the list either. The IP address comes from the `X-Real-IP` header nginx sets, which is only safe because the app listens on 127.0.0.1. The counts are kept in the app's memory (`lib/sign-in-limits.ts`) and reset when it restarts. That works because production runs one process. If the app ever runs more than one process, the counts must move to Postgres.
+
+A sign-in link that has expired or was already used opens the sign-in page with a message asking the person to send themselves a new one.
+
 Restart the server after changing the list. Removing someone blocks new sign-ins, including a link they were sent before you removed them. It does not end a session they already have. Sessions last 7 days and renew while in use. For now, end them by hand in Postgres:
 
 ```sql
