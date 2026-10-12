@@ -97,6 +97,27 @@ export function checkAuthSecret(): void {
   }
 }
 
+// Checkout needs the Stripe secret key and the id of the monthly price.
+// Outside development both must be set and have the shape Stripe gives
+// them, so a missing or swapped setting stops the server at startup
+// instead of failing on someone's first Upgrade click. The messages name
+// the settings, never their values: the key can charge customers.
+export function checkStripeConfig(): void {
+  if (process.env.NODE_ENV === "development") return;
+  const key = process.env.STRIPE_SECRET_KEY ?? "";
+  if (!key.startsWith("sk_test_") && !key.startsWith("sk_live_")) {
+    throw new Error(
+      "STRIPE_SECRET_KEY must be set to a Stripe secret key, starting with sk_test_ or sk_live_.",
+    );
+  }
+  const priceId = process.env.STRIPE_PRICE_ID ?? "";
+  if (!priceId.startsWith("price_")) {
+    throw new Error(
+      "STRIPE_PRICE_ID must be set to the id of the monthly price in Stripe, starting with price_.",
+    );
+  }
+}
+
 // Every page and every job needs the database. Without this check, a
 // missing DATABASE_URL only shows up as server errors on each request.
 // The message never includes the value: it holds the database password.

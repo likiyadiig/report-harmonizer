@@ -1,0 +1,47 @@
+"use client";
+
+import { useState } from "react";
+
+// Asks our server for a Stripe Checkout address, then goes there. Paying
+// happens on Stripe's page, never here.
+export function UpgradeButton() {
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  async function upgrade() {
+    setPending(true);
+    setFailed(false);
+    try {
+      const response = await fetch("/api/checkout", { method: "POST" });
+      if (response.status === 401) {
+        window.location.assign("/sign-in");
+        return;
+      }
+      const data: unknown = await response.json();
+      const url = (data as { url?: unknown } | null)?.url;
+      if (!response.ok || typeof url !== "string") throw new Error("no url");
+      // Stays disabled while the browser leaves, so a second click can't
+      // start a second checkout.
+      window.location.assign(url);
+    } catch {
+      setFailed(true);
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <button
+        type="button"
+        onClick={upgrade}
+        disabled={pending}
+        className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+      >
+        {pending ? "Opening checkout…" : "Upgrade"}
+      </button>
+      <p aria-live="polite" className="text-sm text-red-700">
+        {failed && "Checkout could not start. Please try again."}
+      </p>
+    </div>
+  );
+}

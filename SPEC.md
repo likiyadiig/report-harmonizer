@@ -27,6 +27,7 @@ one writer. They already work in Word with tracked changes.
 - Sign in
 - Rules (edit and save)
 - Upload (choose file, see progress, download result and summary)
+- Billing (/billing: the plan, its price and an Upgrade button)
 
 # Data model
 User: id, email, name (required by the auth library, left empty),
@@ -65,8 +66,7 @@ the user's own rule set.
 - Languages other than English.
 
 # Price
-To be tested. Starting point $15/month with a free tier of one
-report, so someone can try it on a real document first.
+15 euros a month, with a free tier of one report, still to be tested.
 
 # Definition of done
 A consultant runs a real multi-author report through it, accepts

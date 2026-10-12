@@ -4,12 +4,18 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { getEmailConfig } = await import("./lib/email");
     const { getAllowlist } = await import("./lib/allowlist");
-    const { checkAuthSecret, checkAuthUrl, checkDatabaseUrl, getAnthropicKey, getUploadDir } =
-      await import("./lib/config");
+    const {
+      checkAuthSecret,
+      checkAuthUrl,
+      checkDatabaseUrl,
+      checkStripeConfig,
+      getAnthropicKey,
+      getUploadDir,
+    } = await import("./lib/config");
     // If DATABASE_URL, the email settings, ALLOWED_EMAILS, UPLOAD_DIR,
-    // BETTER_AUTH_URL, BETTER_AUTH_SECRET or ANTHROPIC_API_KEY are
-    // incomplete, stop the server so a bad setup fails at startup and not
-    // on someone's first sign-in or upload.
+    // BETTER_AUTH_URL, BETTER_AUTH_SECRET, ANTHROPIC_API_KEY or the Stripe
+    // settings are incomplete, stop the server so a bad setup fails at
+    // startup and not on someone's first sign-in, upload or checkout.
     // Throwing is not enough: Next.js logs the error and keeps serving.
     try {
       checkDatabaseUrl();
@@ -25,6 +31,10 @@ export async function register() {
       checkAuthSecret();
       if (!getAnthropicKey()) {
         console.warn("ANTHROPIC_API_KEY is empty: uploaded reports will fail instead of being harmonized (development only).");
+      }
+      checkStripeConfig();
+      if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PRICE_ID) {
+        console.warn("STRIPE_SECRET_KEY or STRIPE_PRICE_ID is empty: the Upgrade button will fail (development only).");
       }
     } catch (err) {
       console.error(err instanceof Error ? err.message : err);
