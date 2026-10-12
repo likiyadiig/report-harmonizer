@@ -32,6 +32,8 @@ one writer. They already work in Word with tracked changes.
 # Data model
 User: id, email, name (required by the auth library, left empty),
   emailVerified, image (optional, used by the auth library, left empty),
+  subscriptionStatus (free, active, past_due, canceled; default free;
+  set only by the Stripe webhook), stripeCustomerId (optional, unique),
   createdAt, updatedAt
 RuleSet: id, userId (one per user), body, updatedAt
 Job: id, userId, status (queued, processing, done, failed),
@@ -39,6 +41,8 @@ Job: id, userId, status (queued, processing, done, failed),
   model, promptVersion, paragraphsTotal, paragraphsDone, editsTotal,
   editsFlagged, editsSkipped, inputTokens, outputTokens, error,
   createdAt, updatedAt, finishedAt, downloadedAt, filesDeletedAt
+ProcessedEvent: id, stripeEventId (unique), createdAt. One row per
+  Stripe event applied, so a resent event is applied only once.
 Session, Verification, Account: sign-in tables required by the auth
   library (email link sign-in).
 

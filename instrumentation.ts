@@ -36,6 +36,9 @@ export async function register() {
       if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PRICE_ID) {
         console.warn("STRIPE_SECRET_KEY or STRIPE_PRICE_ID is empty: the Upgrade button will fail (development only).");
       }
+      if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        console.warn("STRIPE_WEBHOOK_SECRET is empty: the Stripe webhook will refuse every event (development only).");
+      }
     } catch (err) {
       console.error(err instanceof Error ? err.message : err);
       process.exit(1);

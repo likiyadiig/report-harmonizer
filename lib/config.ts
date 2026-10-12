@@ -97,8 +97,9 @@ export function checkAuthSecret(): void {
   }
 }
 
-// Checkout needs the Stripe secret key and the id of the monthly price.
-// Outside development both must be set and have the shape Stripe gives
+// Checkout needs the Stripe secret key and the id of the monthly price,
+// and the webhook needs its signing secret. Outside development all three
+// must be set and have the shape Stripe gives
 // them, so a missing or swapped setting stops the server at startup
 // instead of failing on someone's first Upgrade click. The messages name
 // the settings, never their values: the key can charge customers.
@@ -114,6 +115,14 @@ export function checkStripeConfig(): void {
   if (!priceId.startsWith("price_")) {
     throw new Error(
       "STRIPE_PRICE_ID must be set to the id of the monthly price in Stripe, starting with price_.",
+    );
+  }
+  // Without it, the webhook can't check that an event came from Stripe,
+  // so no payment would ever be applied.
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? "";
+  if (!webhookSecret.startsWith("whsec_")) {
+    throw new Error(
+      "STRIPE_WEBHOOK_SECRET must be set to the webhook signing secret from Stripe, starting with whsec_.",
     );
   }
 }
