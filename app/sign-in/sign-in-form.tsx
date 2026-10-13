@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { input, primaryButton, secondaryButton } from "@/components/ui";
 import { sendLink, type SignInState } from "./actions";
 
 const initialState: SignInState = { status: "idle" };
@@ -45,7 +46,9 @@ export function SignInForm({
         </p>
       )}
       {!editing && <StatusMessage status={state.status} />}
-      <label htmlFor="email">Email</label>
+      <label htmlFor="email" className="font-medium">
+        Email
+      </label>
       <input
         id="email"
         name="email"
@@ -53,12 +56,12 @@ export function SignInForm({
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="rounded border px-3 py-2"
+        className={input}
       />
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+        className={primaryButton}
       >
         {pending ? "Sending…" : "Send sign-in link"}
       </button>
@@ -101,7 +104,7 @@ export function SentMessage({
         spam folder. The link expires in {expiresMinutes} minutes.
       </p>
       {linkInTerminal && (
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted">
           Development without EMAIL_API_KEY. The link is in the server
           terminal.
         </p>
@@ -109,7 +112,7 @@ export function SentMessage({
       <button
         type="button"
         onClick={onChangeAddress}
-        className="rounded border px-3 py-2"
+        className={secondaryButton}
       >
         Use a different email address
       </button>

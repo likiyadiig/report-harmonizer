@@ -1,4 +1,5 @@
 import { getEmailConfig, MAGIC_LINK_EXPIRES_MINUTES } from "@/lib/email";
+import { Card, PageHeading } from "@/components/ui";
 import { SignInForm } from "./sign-in-form";
 
 // Better Auth sends a sign-in link that didn't work here with ?error=...
@@ -11,14 +12,16 @@ export default async function SignIn({
 }) {
   const { error } = await searchParams;
   return (
-    <main className="mx-auto max-w-sm p-8">
-      <h1 className="mb-4 text-xl font-semibold">Sign in</h1>
-      <SignInForm
-        expiresMinutes={MAGIC_LINK_EXPIRES_MINUTES}
-        linkInTerminal={linkInTerminal()}
-        linkFailed={error !== undefined}
-      />
-    </main>
+    <div className="mx-auto w-full max-w-md px-4 py-10 sm:px-6 sm:py-14">
+      <PageHeading>Sign in</PageHeading>
+      <Card>
+        <SignInForm
+          expiresMinutes={MAGIC_LINK_EXPIRES_MINUTES}
+          linkInTerminal={linkInTerminal()}
+          linkFailed={error !== undefined}
+        />
+      </Card>
+    </div>
   );
 }
 

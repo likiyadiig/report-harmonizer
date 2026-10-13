@@ -3,16 +3,10 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { PlanCard } from "@/components/plan-card";
+import { Badge, PageHeading, PageWidth, textLink } from "@/components/ui";
 import { ManageButton } from "./manage-button";
 import { UpgradeButton } from "./upgrade-button";
-
-// Only things the service does today.
-const INCLUDED = [
-  "Turn multi-author Word reports into one voice",
-  "Every change returned as a Word tracked change",
-  "Comments where an edit might change the meaning",
-  "Cancel any time",
-];
 
 export default async function Billing() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -32,42 +26,12 @@ export default async function Billing() {
   const hasCustomer = Boolean(user?.stripeCustomerId);
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
-      <Link href="/" className="text-sm underline">
-        Home
-      </Link>
-      <h1 className="mt-2 mb-6 text-3xl font-semibold tracking-tight sm:text-4xl">
-        Billing
-      </h1>
+    <PageWidth>
+      <PageHeading>Billing</PageHeading>
 
-      <section className="rounded-lg border border-gray-300 p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Report Harmonizer</h2>
-          {subscribed && (
-            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800">
-              Active
-            </span>
-          )}
-        </div>
-
-        <p className="mt-2">
-          <span className="text-3xl font-semibold tracking-tight">15 euros</span>{" "}
-          <span className="text-gray-700">per month</span>
-        </p>
-
-        <ul className="mt-5 space-y-2">
-          {INCLUDED.map((item) => (
-            <li key={item} className="flex gap-2">
-              <span aria-hidden="true" className="text-green-700">
-                ✓
-              </span>
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
-
+      <PlanCard badge={subscribed && <Badge>Active</Badge>}>
         {pastDue && (
-          <p className="mt-5 rounded-md bg-red-50 p-3 text-red-800">
+          <p className="mt-5 rounded-lg bg-red-50 p-3 text-red-800">
             Your last payment failed. Please update your card with Manage subscription.
           </p>
         )}
@@ -81,11 +45,11 @@ export default async function Billing() {
               {hasCustomer && <ManageButton />}
             </>
           )}
-          <Link href="/terms" className="text-sm underline">
+          <Link href="/terms" className={`${textLink} text-sm`}>
             Refund policy and terms
           </Link>
         </div>
-      </section>
-    </main>
+      </PlanCard>
+    </PageWidth>
   );
 }

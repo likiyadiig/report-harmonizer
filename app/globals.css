@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+/* The site's colours, defined once. Each one becomes Tailwind classes,
+   for example --color-navy gives bg-navy, text-navy and border-navy. */
+@theme {
+  --color-navy: #0b1f3a; /* primary buttons and the wordmark */
+  --color-navy-hover: #1c3558;
+  --color-accent: #2b5fd9; /* links, focus outlines, small highlights */
+  --color-accent-soft: #eef3fe; /* badge backgrounds and the home page glow */
+  --color-accent-strong: #1e47a8; /* text on accent-soft */
+  --color-ink: #111827; /* body text */
+  --color-muted: #5b6472; /* secondary text */
+  --color-line: #e3e7ee; /* thin borders */
+  --color-surface: #f7f9fc; /* subtle fills */
+}
+
+/* "inline" because --font-inter is set by next/font on <html>, not here. */
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-ink antialiased;
+  }
+
+  /* One visible focus outline for every link, button and field, so no
+     page can forget it. Only shown for keyboard focus, not mouse clicks. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}

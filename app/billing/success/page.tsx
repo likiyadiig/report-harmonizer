@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { Card, PageHeading, PageWidth } from "@/components/ui";
 
 // Only a thank you. Anyone can open this address, with or without paying,
 // so it grants nothing and ignores session_id. Access is granted by the
@@ -11,12 +11,11 @@ export default async function BillingSuccess() {
   if (!session) redirect("/sign-in");
 
   return (
-    <main className="mx-auto max-w-sm p-8">
-      <Link href="/" className="text-sm underline">
-        Home
-      </Link>
-      <h1 className="mt-2 mb-4 text-xl font-semibold">Thank you</h1>
-      <p>Your access is being set up. This usually takes a moment.</p>
-    </main>
+    <PageWidth>
+      <PageHeading>Thank you</PageHeading>
+      <Card>
+        <p>Your access is being set up. This usually takes a moment.</p>
+      </Card>
+    </PageWidth>
   );
 }

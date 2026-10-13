@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { primaryButton } from "@/components/ui";
 
 // Asks our server for a Stripe Checkout address, then goes there. Paying
 // happens on Stripe's page, never here.
@@ -35,7 +36,7 @@ export function UpgradeButton() {
         type="button"
         onClick={upgrade}
         disabled={pending}
-        className="w-full rounded-md bg-gray-900 px-5 py-2.5 font-medium text-white hover:bg-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 disabled:opacity-50 sm:w-auto"
+        className={`${primaryButton} w-full sm:w-auto`}
       >
         {pending ? "Opening checkout…" : "Upgrade"}
       </button>
