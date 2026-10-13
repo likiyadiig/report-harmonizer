@@ -108,6 +108,11 @@ export default async function Home() {
         >
           Sign in
         </Link>
+        <p className="mt-6 text-sm">
+          <Link href="/terms" className="underline">
+            Refund policy and terms
+          </Link>
+        </p>
       </section>
     </main>
   );

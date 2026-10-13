@@ -370,6 +370,14 @@ Paying happens on Stripe's checkout page. Access is granted only by the Stripe w
 
 In the Stripe Dashboard, enable **card payments only**. With cards, `checkout.session.completed` always means the money arrived, and the webhook sets the user to "active" on that event. Delayed payment methods such as SEPA Direct Debit send `checkout.session.completed` before the money arrives, so turning them on would give access before payment.
 
+The Manage subscription button on `/billing` opens Stripe's Customer Portal, where subscribers cancel or update their card. Refunds are not in the portal; they are done by hand in the Dashboard.
+
+Before going live, in the Stripe Dashboard in **live mode** (test mode is already done):
+
+1. Turn on the Customer Portal. Without it, Manage subscription fails with `PORTAL ... outcome=failed` in the log.
+2. Set cancellation to **at end of billing period**. `/terms` promises access until the end of the paid month.
+3. Turn off switching plans.
+
 ## Tests
 
 ```bash
