@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { primaryButton, secondaryButton } from "@/components/ui";
 
 // Asks our server for a Stripe Customer Portal address, then goes there.
 // Cancelling and changing the card happen on Stripe's page, never here.
@@ -35,11 +36,7 @@ export function ManageButton({ primary = false }: { primary?: boolean }) {
         type="button"
         onClick={manage}
         disabled={pending}
-        className={`w-full rounded-md px-5 py-2.5 font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 disabled:opacity-50 sm:w-auto ${
-          primary
-            ? "bg-gray-900 text-white hover:bg-gray-700"
-            : "border border-gray-300 hover:border-gray-500 hover:bg-gray-50"
-        }`}
+        className={`${primary ? primaryButton : secondaryButton} w-full sm:w-auto`}
       >
         {pending ? "Opening…" : "Manage subscription"}
       </button>

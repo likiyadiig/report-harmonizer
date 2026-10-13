@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { harmonizedFileExists } from "@/lib/download";
 import { failStuckJob, isStuck } from "@/lib/interrupted-jobs";
 import { summaryText } from "@/lib/job-summary";
+import { Card, PageHeading, PageWidth, primaryButton, secondaryButton } from "@/components/ui";
 import { AutoRefresh } from "./auto-refresh";
 import { LocalTime } from "./local-time";
 
@@ -34,65 +35,65 @@ export default async function JobPage({
   const fileReady = job.status === "done" && (await harmonizedFileExists(job.id));
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
+    <PageWidth>
       {/* Keep the status current until the job is done or failed. */}
       {(job.status === "queued" || job.status === "processing") && <AutoRefresh />}
-      <Link href="/" className="text-sm underline">
-        Home
-      </Link>
-      <h1 className="mt-2 mb-4 text-xl font-semibold">
-        {job.originalFilename ?? "Report (files deleted)"}
-      </h1>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-        <dt className="text-gray-600">Status</dt>
-        <dd>{job.status}</dd>
-        {/* job.error is always one of our own short, fixed messages. */}
-        {job.status === "failed" && job.error && (
-          <>
-            <dt className="text-gray-600">Reason</dt>
-            <dd>{job.error}</dd>
-          </>
-        )}
-        <dt className="text-gray-600">Uploaded</dt>
-        <dd>
-          <LocalTime date={job.createdAt.toISOString()} />
-        </dd>
-        {job.finishedAt && (
-          <>
-            <dt className="text-gray-600">Finished</dt>
-            <dd>
-              <LocalTime date={job.finishedAt.toISOString()} />
-            </dd>
-          </>
-        )}
-        <dt className="text-gray-600">Paragraphs to harmonize</dt>
-        {/* Jobs uploaded before paragraphs were counted have no count. */}
-        <dd>{job.paragraphsTotal ?? "Not counted"}</dd>
-      </dl>
-      {job.status === "done" && (
-        <section className="mt-6">
-          <p>{summaryText(job)}</p>
-          {fileReady ? (
+      <PageHeading>{job.originalFilename ?? "Report (files deleted)"}</PageHeading>
+      <Card>
+        {/* The <dd> tags stay without classes: the tests look for the
+            exact markup, so they are styled from the <dl> instead. */}
+        <dl className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-[auto_1fr] sm:gap-y-3 [&_dd]:mb-3 [&_dd]:font-medium sm:[&_dd]:mb-0 [&_dt]:text-sm [&_dt]:text-muted sm:[&_dt]:text-base">
+          <dt>Status</dt>
+          <dd>{job.status}</dd>
+          {/* job.error is always one of our own short, fixed messages. */}
+          {job.status === "failed" && job.error && (
             <>
-              {/* A plain <a>, not <Link>: Link preloads its target, which
-                  would download the report in the background. */}
-              <a
-                href={`/jobs/${job.id}/download`}
-                className="mt-4 inline-block rounded bg-black px-3 py-2 text-white"
-              >
-                Download
-              </a>
-              <p className="mt-2 text-sm text-gray-600">
-                Open the file in Word and use Review to accept or reject each change.
-              </p>
+              <dt>Reason</dt>
+              <dd>{job.error}</dd>
             </>
-          ) : (
-            <p className="mt-4">
-              This file is no longer available. Please upload the report again.
-            </p>
           )}
-        </section>
-      )}
-    </main>
+          <dt>Uploaded</dt>
+          <dd>
+            <LocalTime date={job.createdAt.toISOString()} />
+          </dd>
+          {job.finishedAt && (
+            <>
+              <dt>Finished</dt>
+              <dd>
+                <LocalTime date={job.finishedAt.toISOString()} />
+              </dd>
+            </>
+          )}
+          <dt>Paragraphs to harmonize</dt>
+          {/* Jobs uploaded before paragraphs were counted have no count. */}
+          <dd>{job.paragraphsTotal ?? "Not counted"}</dd>
+        </dl>
+        {job.status === "done" && (
+          <section className="mt-6 border-t border-line pt-6">
+            <p>{summaryText(job)}</p>
+            {fileReady ? (
+              <>
+                {/* A plain <a>, not <Link>: Link preloads its target, which
+                    would download the report in the background. */}
+                <a href={`/jobs/${job.id}/download`} className={`${primaryButton} mt-5 w-full sm:w-auto`}>
+                  Download
+                </a>
+                <p className="mt-3 text-sm text-muted">
+                  Open the file in Word and use Review to accept or reject each change.
+                </p>
+              </>
+            ) : (
+              <p className="mt-4">
+                This file is no longer available. Please upload the report again.
+              </p>
+            )}
+          </section>
+        )}
+      </Card>
+      {/* Always shown, so the way onward is obvious whatever the status. */}
+      <Link href="/upload" className={`${secondaryButton} mt-6 w-full sm:w-auto`}>
+        Upload another report
+      </Link>
+    </PageWidth>
   );
 }

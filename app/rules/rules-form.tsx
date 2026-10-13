@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { saveRules, type SaveRulesState } from "./actions";
 import { MAX_RULES_LENGTH } from "@/lib/default-rules";
+import { input, primaryButton } from "@/components/ui";
 
 const initialState: SaveRulesState = { status: "idle", message: "" };
 
@@ -25,22 +26,24 @@ export function RulesForm({ initialBody }: { initialBody: string }) {
       }}
       className="flex flex-col gap-3"
     >
-      <label htmlFor="body">Style rules</label>
+      <label htmlFor="body" className="font-medium">
+        Style rules
+      </label>
       <textarea
         id="body"
         name="body"
         rows={14}
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        className="rounded border px-3 py-2 font-mono text-sm"
+        className={`${input} font-mono text-sm`}
       />
-      <p className={`text-sm ${tooLong ? "text-red-700" : "text-gray-600"}`}>
+      <p className={`text-sm ${tooLong ? "text-red-700" : "text-muted"}`}>
         {length.toLocaleString("en-US")} / {MAX_RULES_LENGTH.toLocaleString("en-US")} characters
       </p>
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+        className={`${primaryButton} sm:self-start`}
       >
         {pending ? "Saving…" : "Save"}
       </button>

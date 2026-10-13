@@ -1,6 +1,7 @@
 "use client"; // Error pages must be Client Components.
 
 import { useEffect } from "react";
+import { Card, PageHeading, PageWidth, primaryButton, textLink } from "@/components/ui";
 
 export const RETRY_EVERY_MS = 10_000;
 
@@ -17,26 +18,28 @@ export default function JobErrorPage({ retry }: { retry: () => void }) {
   }, [retry]);
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <h1 className="mb-4 text-xl font-semibold">Something went wrong</h1>
-      <p className="mb-4">
-        Something went wrong on our side. If your report is still being
-        harmonized, that carries on in the background. This page tries again
-        on its own.
-      </p>
-      <button
-        type="button"
-        onClick={() => retry()}
-        className="rounded border px-3 py-2"
-      >
-        Try again
-      </button>
-      {/* A plain <a>, not <Link>: a full page load starts fresh. */}
-      <p className="mt-4">
-        <a href="/" className="underline">
-          Back to home
-        </a>
-      </p>
-    </main>
+    <PageWidth>
+      <PageHeading>Something went wrong</PageHeading>
+      <Card>
+        <p className="mb-5">
+          Something went wrong on our side. If your report is still being
+          harmonized, that carries on in the background. This page tries again
+          on its own.
+        </p>
+        <button
+          type="button"
+          onClick={() => retry()}
+          className={primaryButton}
+        >
+          Try again
+        </button>
+        {/* A plain <a>, not <Link>: a full page load starts fresh. */}
+        <p className="mt-5">
+          <a href="/" className={textLink}>
+            Back to home
+          </a>
+        </p>
+      </Card>
+    </PageWidth>
   );
 }
