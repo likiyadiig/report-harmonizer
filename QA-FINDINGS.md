@@ -27,6 +27,7 @@ no change, for the reason given.
 | Pass 4 #5: silent download on unreadable file | `app/jobs/[id]/download/route.ts:37` | Low | The setup doesn't produce wrong permissions. | Accept |
 | Pass 5 #3: starting dev could fail production jobs | `instrumentation.ts:33` | Low | Checked on 8 October: dev uses database `harmonizer` and upload folder `/home/malik/report-harmonizer-uploads`, production uses `harmonizer_prod` and `/var/lib/report-harmonizer/uploads`. | Accept |
 | Stripe webhook #1: events applied out of order can leave the wrong status | `app/api/webhooks/stripe/route.ts:40` | Low | Card payments only; a late invoice.paid after cancellation is unlikely and easy to correct by hand. | Accept |
+| Stripe #2: resubscribing creates a new Stripe customer | `app/api/checkout/route.ts:32` | Low | The old customer is only left behind in Stripe; the user's access and portal use the new one. | Accept |
 
 What would change my mind on the accepted findings:
 
@@ -44,6 +45,8 @@ What would change my mind on the accepted findings:
   same `UPLOAD_DIR`.
 - **Stripe webhook #1:** seeing it happen once in the logs, or
   enabling delayed payment methods.
+- **Stripe #2:** a customer needing their old invoices in the portal,
+  or a refund request on a charge made to the old customer.
 
 # Pass 1: Authorization
 
@@ -739,3 +742,21 @@ known when it was written on 2026-10-12, branch `stripe-checkout`.
   fetch the subscription's current status from Stripe instead of
   trusting the event. Both need a field or a Stripe call that isn't in
   SPEC.md yet.
+
+## 2. Resubscribing creates a new Stripe customer and leaves the old one behind
+
+- **Severity:** Low. Accepted on 2026-10-13.
+- **Where:** `app/api/checkout/route.ts`, the `customer_email` line.
+- **Problem:** Checkout passes the user's email, not their existing
+  Stripe customer id. A user who cancels and subscribes again gets a
+  new Stripe customer. The webhook saves the new id on the user, and
+  the old customer stays in Stripe with nothing pointing to it.
+- **What could go wrong:** The portal opens for the new customer
+  only, so invoices from before the resubscription are not shown
+  there. Refunding an old charge means finding the old customer in
+  the Stripe Dashboard by email.
+- **Why Low:** Access is not affected. Old charges are still in Stripe
+  and can be found by email.
+- **Suggested fix (not built):** When the user already has a
+  `stripeCustomerId`, pass `customer` instead of `customer_email` to
+  the checkout session.

@@ -27,7 +27,11 @@ one writer. They already work in Word with tracked changes.
 - Sign in
 - Rules (edit and save)
 - Upload (choose file, see progress, download result and summary)
-- Billing (/billing: the plan, its price and an Upgrade button)
+- Billing (/billing: the plan, its price, an Upgrade button, a link
+  to the terms, and a Manage subscription button that opens Stripe's
+  Customer Portal, shown once the user has a Stripe customer id)
+- Terms (/terms, public: refund policy and terms of sale, linked from
+  /billing and the signed out home page)
 
 # Data model
 User: id, email, name (required by the auth library, left empty),
@@ -54,6 +58,10 @@ Reports are confidential client documents. Uploaded and generated
 files are deleted from the server as soon as the result is
 downloaded, or after 24 hours at most, whether the job succeeded or
 failed. The original filename is cleared at the same time.
+
+Automatic deletion is not built yet (issue #23). Until it is, files
+are kept until the user asks for them to be deleted, and /terms does
+not promise automatic deletion.
 
 To make the edits, the report's paragraphs are sent to the Claude API
 (Anthropic). No report text is stored in our database: only counts

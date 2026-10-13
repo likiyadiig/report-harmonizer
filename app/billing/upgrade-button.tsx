@@ -35,7 +35,7 @@ export function UpgradeButton() {
         type="button"
         onClick={upgrade}
         disabled={pending}
-        className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+        className="w-full rounded-md bg-gray-900 px-5 py-2.5 font-medium text-white hover:bg-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 disabled:opacity-50 sm:w-auto"
       >
         {pending ? "Opening checkout…" : "Upgrade"}
       </button>
