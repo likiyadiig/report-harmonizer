@@ -60,4 +60,19 @@ describe("register in production", () => {
       "DATABASE_URL must be set to the Postgres connection string, starting with postgresql:// or postgres://.",
     );
   });
+
+  it.each([
+    ["missing", undefined],
+    ["not starting with whsec_", "sk_test_wrong_setting"],
+  ])("stops with a clear message when STRIPE_WEBHOOK_SECRET is %s", async (_case, value) => {
+    // The other Stripe settings are valid, so only the webhook secret can stop it.
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_stand_in");
+    vi.stubEnv("STRIPE_PRICE_ID", "price_stand_in");
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", value);
+    await expect(register()).rejects.toThrow("process.exit");
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(logError).toHaveBeenCalledWith(
+      "STRIPE_WEBHOOK_SECRET must be set to the webhook signing secret from Stripe, starting with whsec_.",
+    );
+  });
 });

@@ -14,14 +14,23 @@ enum JobStatus {
   failed
 }
 
+enum SubscriptionStatus {
+  free
+  active
+  past_due
+  canceled
+}
+
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String   @default("") // required by Better Auth, unused
-  emailVerified Boolean  @default(false)
-  image         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                 String             @id @default(cuid())
+  email              String             @unique
+  name               String             @default("") // required by Better Auth, unused
+  emailVerified      Boolean            @default(false)
+  image              String?
+  subscriptionStatus SubscriptionStatus @default(free) // set only by the Stripe webhook
+  stripeCustomerId   String?            @unique
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   ruleSet  RuleSet?
   jobs     Job[]
@@ -65,6 +74,14 @@ model Job {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+// One row per Stripe event the webhook has applied. The unique
+// stripeEventId is what stops a redelivered event from being applied twice.
+model ProcessedEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  createdAt     DateTime @default(now())
 }
 
 // Sign-in tables required by Better Auth.

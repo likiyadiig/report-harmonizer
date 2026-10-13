@@ -26,6 +26,7 @@ no change, for the reason given.
 | Pass 4 #4: database calls without a time limit | `lib/db.ts:5` | Low | Postgres runs on the same machine. | Accept |
 | Pass 4 #5: silent download on unreadable file | `app/jobs/[id]/download/route.ts:37` | Low | The setup doesn't produce wrong permissions. | Accept |
 | Pass 5 #3: starting dev could fail production jobs | `instrumentation.ts:33` | Low | Checked on 8 October: dev uses database `harmonizer` and upload folder `/home/malik/report-harmonizer-uploads`, production uses `harmonizer_prod` and `/var/lib/report-harmonizer/uploads`. | Accept |
+| Stripe webhook #1: events applied out of order can leave the wrong status | `app/api/webhooks/stripe/route.ts:40` | Low | Card payments only; a late invoice.paid after cancellation is unlikely and easy to correct by hand. | Accept |
 
 What would change my mind on the accepted findings:
 
@@ -41,6 +42,8 @@ What would change my mind on the accepted findings:
 - **Pass 5 #3:** `DATABASE_URL` changes in either the dev `.env` or
   `/etc/report-harmonizer/env`, or dev and production end up with the
   same `UPLOAD_DIR`.
+- **Stripe webhook #1:** seeing it happen once in the logs, or
+  enabling delayed payment methods.
 
 # Pass 1: Authorization
 
@@ -705,3 +708,34 @@ production systemd unit, the nginx site, and library behaviour in
   nginx (and to the README step), then `sudo nginx -t && sudo
   systemctl reload nginx`. Start with a shorter `max-age` (for
   example one day) if you want to be able to undo it quickly.
+
+# Stripe webhook
+
+Scope: limits of the Stripe webhook (`app/api/webhooks/stripe/route.ts`)
+known when it was written on 2026-10-12, branch `stripe-checkout`.
+
+## 1. Events applied out of order can leave the wrong subscription status
+
+- **Severity:** Low.
+- **Where:** `app/api/webhooks/stripe/route.ts`, `changeFor` and the
+  transaction in `POST`.
+- **Problem:** Stripe doesn't promise to deliver events in the order
+  they happened, and it resends failed ones later. The webhook applies
+  each event as it arrives and stores no event time, so the last event
+  to arrive wins, not the last one to happen.
+- **What could go wrong:** A late `invoice.paid` arriving after
+  `customer.subscription.deleted` sets a canceled user back to
+  "active". An `invoice.paid` arriving before
+  `checkout.session.completed` finds no user with that customer id yet
+  and is skipped; that one is harmless, because the checkout event sets
+  "active" anyway.
+- **Why Low:** It needs two events for the same customer close
+  together and delivered in the wrong order, which is rare, and the
+  next invoice or cancellation event corrects the status. Nobody gets
+  access they paid for removed by it; the risk is a canceled user
+  keeping access until the next event.
+- **Suggested fix (not built):** Store the time of the last applied
+  event (`event.created`) on the user and ignore older events, or
+  fetch the subscription's current status from Stripe instead of
+  trusting the event. Both need a field or a Stripe call that isn't in
+  SPEC.md yet.
