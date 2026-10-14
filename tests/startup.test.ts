@@ -75,4 +75,15 @@ describe("register in production", () => {
       "STRIPE_WEBHOOK_SECRET must be set to the webhook signing secret from Stripe, starting with whsec_.",
     );
   });
+
+  it.each(["rk_test_stand_in", "rk_live_stand_in"])(
+    "starts when STRIPE_SECRET_KEY is a restricted key (%s)",
+    async (key) => {
+      vi.stubEnv("STRIPE_SECRET_KEY", key);
+      vi.stubEnv("STRIPE_PRICE_ID", "price_stand_in");
+      vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_stand_in");
+      await expect(register()).resolves.toBeUndefined();
+      expect(exit).not.toHaveBeenCalled();
+    },
+  );
 });
