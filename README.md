@@ -69,7 +69,7 @@ In development, all of them go in `.env`. That file is gitignored. In production
 | `EMAIL_FROM` | Who sign-in emails come from. Use the name "Report Harmonizer" and an address on a domain verified in Resend. | `Report Harmonizer <signin@yourdomain.com>` |
 | `ALLOWED_EMAILS` | The email addresses allowed to sign in, separated by commas. Case and spaces are ignored. | `you@example.com, colleague@example.com` |
 | `ANTHROPIC_API_KEY` | The Claude API key that harmonizes reports. Get it from the Anthropic Console. | `sk-ant-<random characters>` |
-| `STRIPE_SECRET_KEY` | The Stripe secret key that starts checkouts. Get it from the Stripe Dashboard. Use a test mode key in development. | `sk_test_<random characters>` or `sk_live_<random characters>` |
+| `STRIPE_SECRET_KEY` | The Stripe secret key or restricted key that starts checkouts. Get it from the Stripe Dashboard. Use a test mode key in development. | `sk_test_`, `sk_live_`, `rk_test_` or `rk_live_` followed by `<random characters>` |
 | `STRIPE_PRICE_ID` | The id of the monthly price people subscribe to, from the Stripe Dashboard. | `price_<random characters>` |
 | `STRIPE_WEBHOOK_SECRET` | Checks that events sent to `/api/webhooks/stripe` really come from Stripe. In development, the one printed by `stripe listen`; in production, the one shown for the endpoint in the Stripe Dashboard. | `whsec_<random characters>` |
 
@@ -89,7 +89,7 @@ In production, both are required. The server refuses to start if either is missi
 
 `ANTHROPIC_API_KEY` is required in production. The server refuses to start if it is missing. In development, use a separate key made for development, never the production one. You can also leave it empty: the server prints a warning when it starts, and uploaded reports fail with "The server isn't set up to harmonize reports yet" instead of being sent to Claude.
 
-The three Stripe settings are required in production. The server refuses to start if `STRIPE_SECRET_KEY` doesn't start with `sk_test_` or `sk_live_`, `STRIPE_PRICE_ID` doesn't start with `price_`, or `STRIPE_WEBHOOK_SECRET` doesn't start with `whsec_`. In development, use test mode values, never the live ones. If they are empty, the server prints a warning when it starts, and checkout or the webhook fails.
+The three Stripe settings are required in production. The server refuses to start if `STRIPE_SECRET_KEY` doesn't start with `sk_test_`, `sk_live_`, `rk_test_` or `rk_live_`, `STRIPE_PRICE_ID` doesn't start with `price_`, or `STRIPE_WEBHOOK_SECRET` doesn't start with `whsec_`. In development, use test mode values, never the live ones. If they are empty, the server prints a warning when it starts, and checkout or the webhook fails.
 
 ## Deploying
 
@@ -371,6 +371,13 @@ Paying happens on Stripe's checkout page. Access is granted only by the Stripe w
 In the Stripe Dashboard, enable **card payments only**. With cards, `checkout.session.completed` always means the money arrived, and the webhook sets the user to "active" on that event. Delayed payment methods such as SEPA Direct Debit send `checkout.session.completed` before the money arrives, so turning them on would give access before payment.
 
 The Manage subscription button on `/billing` opens Stripe's Customer Portal, where subscribers cancel or update their card. Refunds are not in the portal; they are done by hand in the Dashboard.
+
+`STRIPE_SECRET_KEY` can be a restricted key (`rk_test_` or `rk_live_`) instead of a full secret key. A restricted key can only do what you allow, so a leaked key can do less harm. The app makes two Stripe calls, so give the key **Write** access to:
+
+- **Checkout Sessions**, for the Upgrade button.
+- **Customer portal**, for the Manage subscription button.
+
+Checking webhook signatures uses `STRIPE_WEBHOOK_SECRET` and needs no key permission. Try both buttons in test mode with an `rk_test_` key before using an `rk_live_` key.
 
 Before going live, in the Stripe Dashboard in **live mode** (test mode is already done):
 

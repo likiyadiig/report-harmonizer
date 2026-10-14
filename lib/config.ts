@@ -103,12 +103,13 @@ export function checkAuthSecret(): void {
 // them, so a missing or swapped setting stops the server at startup
 // instead of failing on someone's first Upgrade click. The messages name
 // the settings, never their values: the key can charge customers.
+// A restricted key (rk_) is accepted as well as a full secret key (sk_).
 export function checkStripeConfig(): void {
   if (process.env.NODE_ENV === "development") return;
   const key = process.env.STRIPE_SECRET_KEY ?? "";
-  if (!key.startsWith("sk_test_") && !key.startsWith("sk_live_")) {
+  if (!["sk_test_", "sk_live_", "rk_test_", "rk_live_"].some((prefix) => key.startsWith(prefix))) {
     throw new Error(
-      "STRIPE_SECRET_KEY must be set to a Stripe secret key, starting with sk_test_ or sk_live_.",
+      "STRIPE_SECRET_KEY must be set to a Stripe secret or restricted key, starting with sk_test_, sk_live_, rk_test_ or rk_live_.",
     );
   }
   const priceId = process.env.STRIPE_PRICE_ID ?? "";
