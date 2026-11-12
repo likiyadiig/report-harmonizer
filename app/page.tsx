@@ -13,12 +13,24 @@ import {
 } from "@/components/ui";
 import { UploadForm } from "./upload/upload-form";
 
-export default async function Home() {
+// Deleting a report on its job page comes back here with ?deleted=1. Only
+// that exact value shows the fixed message; the value itself is never shown.
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const session = await auth.api.getSession({ headers: await headers() });
+  const { deleted } = await searchParams;
 
   if (session) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
+        {deleted === "1" && (
+          <p role="status" className="mb-6 rounded-lg bg-accent-soft px-4 py-3 text-accent-strong">
+            Report deleted.
+          </p>
+        )}
         <h1 className="text-3xl font-light tracking-tight text-navy sm:text-4xl">
           Welcome back
         </h1>

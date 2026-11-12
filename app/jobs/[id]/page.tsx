@@ -7,6 +7,7 @@ import { harmonizedFileExists } from "@/lib/download";
 import { failStuckJob, isStuck } from "@/lib/interrupted-jobs";
 import { summaryText } from "@/lib/job-summary";
 import { Card, PageHeading, PageWidth, primaryButton, secondaryButton } from "@/components/ui";
+import { deleteJob } from "./actions";
 import { AutoRefresh } from "./auto-refresh";
 import { LocalTime } from "./local-time";
 
@@ -94,6 +95,27 @@ export default async function JobPage({
       <Link href="/upload" className={`${secondaryButton} mt-6 w-full sm:w-auto`}>
         Upload another report
       </Link>
+      {/* Only once the job has stopped running: a running job would write
+          its results back to disk after being deleted. <details> asks for
+          confirmation without any JavaScript, so one click can't delete. */}
+      {(job.status === "done" || job.status === "failed") && (
+        <details className="mt-8 border-t border-line pt-6">
+          <summary className="cursor-pointer text-sm text-muted hover:text-navy">
+            Delete this report
+          </summary>
+          <p className="mt-3">
+            This removes the uploaded file, the edited file and this job. It can&apos;t be undone.
+          </p>
+          <form action={deleteJob.bind(null, job.id)} className="mt-4">
+            <button
+              type="submit"
+              className="inline-flex w-full items-center justify-center rounded-lg bg-red-700 px-5 py-2.5 font-medium text-white transition-colors hover:bg-red-800 sm:w-auto"
+            >
+              Yes, delete it
+            </button>
+          </form>
+        </details>
+      )}
     </PageWidth>
   );
 }
