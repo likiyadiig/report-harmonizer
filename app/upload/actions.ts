@@ -11,6 +11,7 @@ import { DEFAULT_RULES } from "@/lib/default-rules";
 import { isDocx } from "@/lib/docx";
 import { processJob } from "@/lib/process-job";
 import { DocxReadError, MIN_WORDS, readParagraphs } from "@/lib/read-docx";
+import { SUBSCRIBE_MESSAGE, hasActiveSubscription } from "@/lib/subscription";
 import {
   MAX_UPLOAD_BYTES,
   MAX_UPLOAD_MB,
@@ -29,6 +30,14 @@ export async function uploadReport(
   // not only on the page.
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
+
+  // Checked here, not only by hiding the form: anyone can sign in, and a
+  // hand-made request could still call this action. Nothing is read,
+  // saved or sent to Claude without an active subscription.
+  if (!(await hasActiveSubscription(session.user.id))) {
+    console.log("UPLOAD_REFUSED code=not_subscribed");
+    return { message: SUBSCRIBE_MESSAGE };
+  }
 
   const file = formData.get("file");
   // With no file chosen, browsers still send an empty, unnamed file.

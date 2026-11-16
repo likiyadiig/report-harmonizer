@@ -67,7 +67,7 @@ In development, all of them go in `.env`. That file is gitignored. In production
 | `UPLOAD_DIR` | The folder where uploaded reports are stored. | `/var/lib/report-harmonizer/uploads` |
 | `EMAIL_API_KEY` | The Resend API key that sends sign-in emails. | `re_<random characters>` |
 | `EMAIL_FROM` | Who sign-in emails come from. Use the name "Report Harmonizer" and an address on a domain verified in Resend. | `Report Harmonizer <signin@yourdomain.com>` |
-| `ALLOWED_EMAILS` | The email addresses allowed to sign in, separated by commas. Case and spaces are ignored. | `you@example.com, colleague@example.com` |
+| `ALLOWED_EMAILS` | The email addresses allowed to sign in, separated by commas. Case and spaces are ignored. Empty means anyone can sign in. | `you@example.com, colleague@example.com`, or empty |
 | `ANTHROPIC_API_KEY` | The Claude API key that harmonizes reports. Get it from the Anthropic Console. | `sk-ant-<random characters>` |
 | `STRIPE_SECRET_KEY` | The Stripe secret key or restricted key that starts checkouts. Get it from the Stripe Dashboard. Use a test mode key in development. | `sk_test_`, `sk_live_`, `rk_test_` or `rk_live_` followed by `<random characters>` |
 | `STRIPE_PRICE_ID` | The id of the monthly price people subscribe to, from the Stripe Dashboard. | `price_<random characters>` |
@@ -85,7 +85,7 @@ In development, use a separate Resend API key made for development. Never put th
 
 In production, both are required. The server refuses to start if either is missing.
 
-`ALLOWED_EMAILS` is required in production too. The server refuses to start if it is missing or empty. In development, an empty `ALLOWED_EMAILS` lets any address sign in, and the server prints a warning when it starts. `npm run dev` listens on localhost only, so nobody else can reach that server. An entry that is not a single email address, for example addresses separated by semicolons, stops the server in every environment.
+`ALLOWED_EMAILS` can be empty, in every environment. Empty (or missing) means anyone can sign in, and the server prints a warning when it starts. Uploading still needs an active subscription (see Payments). To close sign-in again, put the addresses back and restart the server. An entry that is not a single email address, for example addresses separated by semicolons, stops the server in every environment, so a typo can't quietly open or close sign-in.
 
 `ANTHROPIC_API_KEY` is required in production. The server refuses to start if it is missing. In development, use a separate key made for development, never the production one. You can also leave it empty: the server prints a warning when it starts, and uploaded reports fail with "The server isn't set up to harmonize reports yet" instead of being sent to Claude.
 
@@ -290,7 +290,9 @@ In development with `EMAIL_API_KEY` empty, the link is printed to the terminal t
 
 If sending fails, the sign-in page asks the person to try again. The server log gets one line like `EMAIL_SEND_FAILED status=403 code=validation_error`, with no link and no email address.
 
-Only addresses in `ALLOWED_EMAILS` can sign in. Anyone else sees the same "check your email" page but gets no email, so the page doesn't reveal who is on the list. The server log gets one line, `SIGN_IN_REFUSED code=not_allowed`, with no address.
+With `ALLOWED_EMAILS` empty, anyone can sign in. With addresses in it, only those addresses can sign in. Anyone else sees the same "check your email" page but gets no email, so the page doesn't reveal who is on the list. The server log gets one line, `SIGN_IN_REFUSED code=not_allowed`, with no address.
+
+Sign-in links can only be asked for through the sign-in page. Better Auth's own address for this, `POST /api/auth/sign-in/magic-link`, answers 404 and logs `SIGN_IN_REFUSED code=direct_request` (`app/api/auth/[...all]/route.ts`). Otherwise a script could call it directly and skip the limits below. Opening the link in the email still works: that is a different address.
 
 Sign-in links are limited to 3 per email address and 10 per IP address in any 10 minutes. After that, the page says "Too many attempts" and sends nothing. Allowed and not allowed addresses are counted the same way, so the limit doesn't reveal who is on the list either. The IP address comes from the `X-Real-IP` header nginx sets, which is only safe because the app listens on 127.0.0.1. The counts are kept in the app's memory (`lib/sign-in-limits.ts`) and reset when it restarts. That works because production runs one process. If the app ever runs more than one process, the counts must move to Postgres.
 
@@ -368,6 +370,8 @@ JOB_FAILED job=<id> code=api_error calls=2 in=0 out=0
 
 Paying happens on Stripe's checkout page. Access is granted only by the Stripe webhook at `/api/webhooks/stripe`, once Stripe confirms the payment.
 
+Uploading a report needs an active subscription (`lib/subscription.ts`). A signed-in user whose status is free, past due or canceled sees "Report Harmonizer costs 15 euros a month. Subscribe to upload your first report." on the home page and `/upload`, with a button to `/billing`, instead of the upload form. The upload action refuses them too, before reading the file, and logs `UPLOAD_REFUSED code=not_subscribed`. This applies to every account, including yours.
+
 In the Stripe Dashboard, enable **card payments only**. With cards, `checkout.session.completed` always means the money arrived, and the webhook sets the user to "active" on that event. Delayed payment methods such as SEPA Direct Debit send `checkout.session.completed` before the money arrives, so turning them on would give access before payment.
 
 The Manage subscription button on `/billing` opens Stripe's Customer Portal, where subscribers cancel or update their card. Refunds are not in the portal; they are done by hand in the Dashboard.
@@ -419,7 +423,8 @@ The tracked changes tests (`tests/write-tracked-changes.test.ts`) build small ma
 Built:
 
 - Sign in with an email link.
-- Only addresses on an allowlist can sign in.
+- Anyone can sign in, or only addresses on an allowlist when `ALLOWED_EMAILS` is set.
+- Uploading needs an active subscription.
 - Edit and save a rule set, prefilled with the default rules.
 - Upload a .docx. This creates a queued job.
 - Read the report's paragraphs, count them, and reject reports that are unreadable or empty.

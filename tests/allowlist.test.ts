@@ -42,24 +42,31 @@ describe("getAllowlist", () => {
     expect(getAllowlist()).toEqual({ mode: "list", emails: new Set(["a@x.com", "b@y.com"]) });
   });
 
+  // Sign-up is open: an empty list means anyone, in every environment.
   it.each([
     ["missing", undefined],
     ["empty", ""],
     ["only commas and spaces", " , ,"],
-  ])("fails in production when the list is %s", (_, allowed) => {
+  ])("lets anyone sign in in production when the list is %s", (_, allowed) => {
     setEnv("production", allowed);
-    expect(() => getAllowlist()).toThrow("ALLOWED_EMAILS must list at least one email address");
-  });
-
-  it.each([undefined, "test", "Development"])("fails when NODE_ENV is %s and the list is empty", (nodeEnv) => {
-    setEnv(nodeEnv, "");
-    expect(() => getAllowlist()).toThrow("ALLOWED_EMAILS must list at least one email address");
-  });
-
-  it("lets anyone sign in in development when the list is empty", () => {
-    setEnv("development", "");
     expect(getAllowlist()).toEqual({ mode: "anyone" });
   });
+
+  it.each([undefined, "test", "Development", "development"])(
+    "lets anyone sign in when NODE_ENV is %s and the list is empty",
+    (nodeEnv) => {
+      setEnv(nodeEnv, "");
+      expect(getAllowlist()).toEqual({ mode: "anyone" });
+    },
+  );
+
+  it.each(["a@x.com; b@y.com", "a@x.com b@y.com", "alice", "a@"])(
+    "fails in production on a bad entry: %s",
+    (allowed) => {
+      setEnv("production", allowed);
+      expect(() => getAllowlist()).toThrow("entry 1 is not a single email address");
+    },
+  );
 
   it.each(["a@x.com; b@y.com", "a@x.com b@y.com", "alice", "a@"])(
     "fails in development too on a bad entry: %s",
@@ -79,6 +86,11 @@ describe("isEmailAllowed", () => {
   it.each(["a@x.co", "a@x.com.evil.com", "xa@x.com", ""])("rejects %j", (email) => {
     setEnv("production", LISTED);
     expect(isEmailAllowed(email)).toBe(false);
+  });
+
+  it("allows any address in production when the list is empty", () => {
+    setEnv("production", "");
+    expect(isEmailAllowed(UNLISTED)).toBe(true);
   });
 });
 
@@ -113,6 +125,12 @@ describe("canStartSession", () => {
   it("allows an address on the list", () => {
     setEnv("production", LISTED);
     expect(canStartSession(LISTED)).toBe(true);
+    expect(logged()).toBe("");
+  });
+
+  it("allows any address in production when the list is empty", () => {
+    setEnv("production", "");
+    expect(canStartSession(UNLISTED)).toBe(true);
     expect(logged()).toBe("");
   });
 

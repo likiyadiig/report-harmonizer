@@ -10,6 +10,8 @@ import { makeDocx } from "./helpers/make-docx.mjs";
 const jobs = new Map<string, Record<string, unknown>>();
 vi.mock("@/lib/db", () => ({
   db: {
+    // A subscriber, so the upload gets as far as saving the file.
+    user: { findUnique: async () => ({ subscriptionStatus: "active" }) },
     ruleSet: { findUnique: async () => null },
     job: {
       create: async ({ data }: { data: Record<string, unknown> }) => {

@@ -5,11 +5,13 @@ type Allowlist = { mode: "list"; emails: Set<string> } | { mode: "anyone" };
 const ONE_ADDRESS = /^[^@\s]+@[^@\s]+$/;
 
 // Reads ALLOWED_EMAILS: email addresses separated by commas. Case and spaces
-// around each address are ignored. An empty list throws, except when NODE_ENV
-// is exactly "development", where it lets any address sign in (npm run dev
-// listens on localhost only). An entry that is not a single address is a typo
-// (for example semicolons instead of commas), so that throws in every
-// environment. Errors never repeat an address, only its position in the list.
+// around each address are ignored. An empty or missing list lets any address
+// sign in, in every environment: sign-up is open, and uploading needs an
+// active subscription (lib/subscription.ts). Putting addresses back and
+// restarting closes sign-in to the list again. An entry that is not a single
+// address is a typo (for example semicolons instead of commas), so that
+// throws in every environment, rather than quietly opening or closing
+// sign-in. Errors never repeat an address, only its position in the list.
 export function getAllowlist(): Allowlist {
   const entries = (process.env.ALLOWED_EMAILS ?? "")
     .split(",")
@@ -23,8 +25,7 @@ export function getAllowlist(): Allowlist {
     );
   }
   if (entries.length > 0) return { mode: "list", emails: new Set(entries) };
-  if (process.env.NODE_ENV === "development") return { mode: "anyone" };
-  throw new Error("ALLOWED_EMAILS must list at least one email address.");
+  return { mode: "anyone" };
 }
 
 export function isEmailAllowed(email: string): boolean {

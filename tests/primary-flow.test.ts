@@ -30,6 +30,8 @@ vi.mock("@/lib/db", () => {
     Object.entries(where).every(([key, value]) => job[key] === value);
   return {
     db: {
+      // Both users are subscribers, so uploads go through.
+      user: { findUnique: async () => ({ subscriptionStatus: "active" }) },
       ruleSet: { findUnique: async () => null },
       job: {
         create: async ({ data }: { data: Record<string, unknown> }) => {

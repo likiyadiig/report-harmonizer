@@ -14,7 +14,7 @@ one writer. They already work in Word with tracked changes.
 - Edit a rule set, saved to the account. Starts prefilled with a
   default (short plain sentences, no colons or dashes, never change
   facts, numbers, names or quotes).
-- Upload a .docx report.
+- Upload a .docx report (needs an active subscription, see Price).
 - Get back the same .docx with every edit as a tracked change under
   the author "Report Harmonizer", and a comment on each edit marked
   as a possible meaning change.
@@ -78,7 +78,12 @@ the user's own rule set.
 - Languages other than English.
 
 # Price
-15 euros a month, with a free tier of one report, still to be tested.
+15 euros a month. Anyone can sign in, but uploading a report needs an
+active subscription.
+
+No free tier for launch. Every report costs real Claude API money and
+sign-up is open to strangers, so a free report would need abuse
+protection that isn't built yet.
 
 # Definition of done
 A consultant runs a real multi-author report through it, accepts

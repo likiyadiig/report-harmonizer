@@ -21,7 +21,7 @@ export async function register() {
       checkDatabaseUrl();
       getEmailConfig();
       if (getAllowlist().mode === "anyone") {
-        console.warn("ALLOWED_EMAILS is empty: any address can sign in (development only).");
+        console.warn("ALLOWED_EMAILS is empty: anyone can sign in. Uploading still needs an active subscription.");
       }
       const uploadDir = getUploadDir();
       if (!process.env.UPLOAD_DIR) {
