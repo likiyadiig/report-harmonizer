@@ -2,7 +2,9 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/config";
+import { hasActiveSubscription } from "@/lib/subscription";
 import { PlanCard } from "@/components/plan-card";
+import { SubscribeNotice } from "@/components/subscribe-notice";
 import {
   Card,
   cardSurface,
@@ -24,6 +26,7 @@ export default async function Home({
   const { deleted } = await searchParams;
 
   if (session) {
+    const subscribed = await hasActiveSubscription(session.user.id);
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
         {deleted === "1" && (
@@ -36,10 +39,15 @@ export default async function Home({
         </h1>
         <p className="mt-3 break-all text-muted">Signed in as {session.user.email}</p>
 
-        {/* The same form as /upload, so a report can be uploaded right here. */}
+        {/* The same form as /upload, so a report can be uploaded right here.
+            Without an active subscription, the same notice as /upload. */}
         <Card className="mt-8">
           <h2 className="mb-4 text-xl font-medium text-navy">Upload a report</h2>
-          <UploadForm maxBytes={MAX_UPLOAD_BYTES} maxMb={MAX_UPLOAD_MB} />
+          {subscribed ? (
+            <UploadForm maxBytes={MAX_UPLOAD_BYTES} maxMb={MAX_UPLOAD_MB} />
+          ) : (
+            <SubscribeNotice />
+          )}
         </Card>
       </div>
     );
@@ -158,7 +166,7 @@ export default async function Home({
           <div className="mx-auto mt-8 max-w-md text-ink">
             <PlanCard>
               <p className="mt-6 border-t border-line pt-5 text-muted">
-                Sign in is by invitation for now, to keep costs under control.
+                Sign in with your email. Uploading needs a subscription.
               </p>
               <Link href="/sign-in" className={`${primaryButton} mt-4 w-full`}>
                 Try it
